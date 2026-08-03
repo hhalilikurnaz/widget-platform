@@ -1,9 +1,43 @@
-.vercel/
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Build output
+dist/
+build/
 
 # Environment variables
-.env*.local
+.env
+.env.*
+!.env.example
 
-# Common ignores
-node_modules
-.next/
+# Test coverage
+coverage/
+
+# Turborepo
+.turbo/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
 .DS_Store
+
+# Vercel
+.vercel/
+
+# Logs
+*.log
+
+# Backend generated
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/coverage/
+backend/.vitest/
