@@ -12,3 +12,15 @@ export const DATABASE_STATUS = {
 } as const;
 
 export type DatabaseStatus = (typeof DATABASE_STATUS)[keyof typeof DATABASE_STATUS];
+
+export const RUNTIME_VERSION = '1.0.0';
+
+export const RUNTIME_CDN_ORIGIN = 'https://cdn.widgetplatform.com';
+
+export const PUBLIC_CACHE_MAX_AGE_SECONDS = 300;
+
+export const PUBLIC_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+
+export const PUBLIC_RATE_LIMIT_MAX_REQUESTS = 200;
+
+export const EMBED_TOKEN_PATTERN = /^wt_[a-f0-9]{32}$/;

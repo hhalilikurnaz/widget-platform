@@ -542,6 +542,79 @@ Creates a **new** draft version copied from the selected historical version. His
 - Publish validation requires name, valid schema, active draft, and no slug conflict
 - Unpublish sets widget status back to `DRAFT`
 
+## Public Runtime API (Phase 6)
+
+Base prefix: `/public`
+
+These endpoints power the embeddable widget runtime consumed by `widget.js`. No authentication required. Rate limited separately.
+
+### Runtime Architecture
+
+```text
+Customer Website
+      │
+      ▼
+widget.js (CDN)
+      │
+      ▼
+GET /public/widgets/:embedToken/runtime
+      │
+      ▼
+Render published widget
+```
+
+### Endpoints
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/public/widgets/:embedToken/config` | Published widget configuration |
+| `GET` | `/public/widgets/:embedToken/runtime` | Full runtime payload for widget.js |
+| `GET` | `/public/widgets/:embedToken/health` | Runtime health check |
+
+### Embed Snippet
+
+```html
+<script src="https://cdn.widgetplatform.com/widget.js"></script>
+<script>
+WidgetPlatform.init({
+  token: "wt_YOUR_EMBED_TOKEN"
+})
+</script>
+```
+
+The runtime response also includes this snippet in `embedSnippet`.
+
+### Caching
+
+Config and runtime responses include:
+
+- `ETag` — content hash for conditional requests
+- `Cache-Control: public, max-age=300`
+- `Last-Modified` — published version timestamp
+
+Send `If-None-Match` with the ETag to receive `304 Not Modified` when content is unchanged.
+
+### Example: Load Runtime
+
+```bash
+curl http://localhost:4000/public/widgets/wt_YOUR_EMBED_TOKEN/runtime
+```
+
+### Example: Conditional Config Fetch
+
+```bash
+curl -H 'If-None-Match: "abc123def4567890"' \
+  http://localhost:4000/public/widgets/wt_YOUR_EMBED_TOKEN/config
+```
+
+### Business Rules
+
+- Embed token is the only public identifier (no widget UUIDs exposed)
+- Draft, archived, and deleted widgets return generic `404`
+- Only the latest published version is served
+- Internal fields (`workspaceId`, `createdBy`, database IDs) are never exposed
+- Invalid embed token format returns `400`
+
 ## Environment Variables
 
 | Variable                    | Required | Description                                  |

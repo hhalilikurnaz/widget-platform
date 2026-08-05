@@ -9,7 +9,7 @@ import type {
 import { normalizeSchemaDocument } from './schema-version.js';
 
 const EMBED_CDN_BASE = 'https://cdn.widgetplatform.com/v1';
-const API_BASE = 'https://api.widgetplatform.com/api/v1';
+const API_BASE = 'https://api.widgetplatform.com';
 
 export function toVersionSummaryDto(
   version: WidgetVersion,

@@ -13,3 +13,4 @@ export {
 
 export { widgetSchemaBodySchema } from '../schemas/widget-schema.schema.js';
 export { widgetVersionParamsSchema } from '../schemas/widget-version.schema.js';
+export { embedTokenParamsSchema } from '../schemas/runtime.schema.js';

@@ -2,13 +2,15 @@ openapi: 3.1.0
 info:
   title: Widget Platform API
   version: 1.0.0
-  description: Widget Management, Schema, and Publishing API for Widget Platform (Phase 3–5)
+  description: Widget Platform API including management, schema, publishing, and public runtime (Phase 3–6)
 servers:
   - url: http://localhost:4000
     description: Local development
 tags:
   - name: Widgets
     description: Widget management endpoints
+  - name: Public Runtime
+    description: Public embed runtime endpoints
 paths:
   /api/v1/widgets:
     get:
@@ -399,6 +401,83 @@ paths:
                 $ref: '#/components/schemas/RestoreVersionResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+  /public/widgets/{embedToken}/config:
+    get:
+      tags: [Public Runtime]
+      summary: Get published widget public configuration
+      parameters:
+        - $ref: '#/components/parameters/EmbedToken'
+        - in: header
+          name: If-None-Match
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Published widget configuration
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+            Last-Modified:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicConfigResponse'
+        '304':
+          description: Not modified
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /public/widgets/{embedToken}/runtime:
+    get:
+      tags: [Public Runtime]
+      summary: Get full runtime payload for widget.js
+      parameters:
+        - $ref: '#/components/parameters/EmbedToken'
+        - in: header
+          name: If-None-Match
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Runtime payload
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+            Last-Modified:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicRuntimeResponse'
+        '304':
+          description: Not modified
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /public/widgets/{embedToken}/health:
+    get:
+      tags: [Public Runtime]
+      summary: Get public runtime health status
+      parameters:
+        - $ref: '#/components/parameters/EmbedToken'
+      responses:
+        '200':
+          description: Runtime health
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicHealthResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   parameters:
     WidgetId:
@@ -408,6 +487,14 @@ components:
       schema:
         type: string
         format: uuid
+    EmbedToken:
+      in: path
+      name: embedToken
+      required: true
+      schema:
+        type: string
+        pattern: '^wt_[a-f0-9]{32}$'
+        example: wt_0123456789abcdef0123456789abcdef
   schemas:
     Widget:
       type: object
@@ -802,6 +889,100 @@ components:
           type: boolean
         data:
           $ref: '#/components/schemas/RestoreVersionResult'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    PublicConfigPayload:
+      type: object
+      properties:
+        schema:
+          $ref: '#/components/schemas/WidgetSchemaDocument'
+        theme:
+          type: object
+        version:
+          type: integer
+        publishedAt:
+          type: string
+          format: date-time
+    PublicConfigResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/PublicConfigPayload'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    PublicRuntimePayload:
+      type: object
+      properties:
+        widget:
+          type: object
+          properties:
+            name:
+              type: string
+            slug:
+              type: string
+            description:
+              type: string
+              nullable: true
+        version:
+          type: integer
+        schema:
+          $ref: '#/components/schemas/WidgetSchemaDocument'
+        theme:
+          type: object
+        behavior:
+          type: object
+        triggers:
+          type: object
+        localization:
+          type: object
+        animations:
+          type: object
+        runtimeVersion:
+          type: string
+        embedSnippet:
+          type: string
+    PublicRuntimeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/PublicRuntimePayload'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    PublicHealthPayload:
+      type: object
+      properties:
+        exists:
+          type: boolean
+        published:
+          type: boolean
+        runtimeVersion:
+          type: string
+        cacheStatus:
+          type: string
+          enum: [enabled, revalidated]
+    PublicHealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/PublicHealthPayload'
         message:
           type: string
           nullable: true
