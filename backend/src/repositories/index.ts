@@ -1,6 +1,1 @@
-/**
- * Repository layer placeholder.
- * Data access abstractions will be implemented in Phase 2.
- */
-
-export {};
+export { widgetRepository, WidgetRepository } from './widget.repository.js';

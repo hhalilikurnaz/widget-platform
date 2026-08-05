@@ -1,10 +1,18 @@
 import type { Response } from 'express';
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface ApiSuccessResponse<T> {
   success: true;
   data: T;
   message: string | null;
   timestamp: string;
+  meta?: PaginationMeta;
 }
 
 export interface ApiErrorResponse {
@@ -33,6 +41,7 @@ export function sendSuccess(
   options?: {
     message?: string;
     statusCode?: number;
+    meta?: PaginationMeta;
   },
 ): void {
   const response: ApiSuccessResponse<unknown> = {
@@ -40,6 +49,7 @@ export function sendSuccess(
     data,
     message: options?.message ?? null,
     timestamp: new Date().toISOString(),
+    ...(options?.meta ? { meta: options.meta } : {}),
   };
 
   res.status(options?.statusCode ?? 200).json(response);

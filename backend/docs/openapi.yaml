@@ -1,0 +1,398 @@
+openapi: 3.1.0
+info:
+  title: Widget Platform API
+  version: 1.0.0
+  description: Widget Management API for Widget Platform (Phase 3)
+servers:
+  - url: http://localhost:4000
+    description: Local development
+tags:
+  - name: Widgets
+    description: Widget management endpoints
+paths:
+  /api/v1/widgets:
+    get:
+      tags: [Widgets]
+      summary: List widgets
+      parameters:
+        - in: query
+          name: workspaceId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 25
+            maximum: 100
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, publishedAt, name]
+            default: updatedAt
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [DRAFT, PUBLISHED, ARCHIVED]
+        - in: query
+          name: themeId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: createdBy
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: deleted
+          schema:
+            type: string
+            enum: ['true', 'false']
+      responses:
+        '200':
+          description: Paginated widget list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [Widgets]
+      summary: Create widget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWidgetRequest'
+            example:
+              workspaceId: 22222222-2222-2222-2222-222222222222
+              name: Contact Us
+              description: Primary contact form
+              createdBy: 33333333-3333-3333-3333-333333333333
+      responses:
+        '201':
+          description: Widget created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/widgets/{id}:
+    get:
+      tags: [Widgets]
+      summary: Get widget by ID
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '200':
+          description: Widget details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Widgets]
+      summary: Update widget metadata
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWidgetRequest'
+            example:
+              name: Updated Contact Form
+              description: Updated description
+      responses:
+        '200':
+          description: Widget updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Widgets]
+      summary: Soft delete widget
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '204':
+          description: Widget deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/archive:
+    post:
+      tags: [Widgets]
+      summary: Archive widget
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '200':
+          description: Widget archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/v1/widgets/{id}/restore:
+    post:
+      tags: [Widgets]
+      summary: Restore archived widget
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '200':
+          description: Widget restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/v1/widgets/{id}/duplicate:
+    post:
+      tags: [Widgets]
+      summary: Duplicate widget
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DuplicateWidgetRequest'
+            example:
+              createdBy: 33333333-3333-3333-3333-333333333333
+      responses:
+        '201':
+          description: Widget duplicated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  parameters:
+    WidgetId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Widget:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, ARCHIVED]
+        description:
+          type: string
+          nullable: true
+        embedToken:
+          type: string
+          nullable: true
+        themeId:
+          type: string
+          format: uuid
+          nullable: true
+        createdBy:
+          type: string
+          format: uuid
+        currentVersionId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    CreateWidgetRequest:
+      type: object
+      required: [workspaceId, name, createdBy]
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        themeId:
+          type: string
+          format: uuid
+        createdBy:
+          type: string
+          format: uuid
+    UpdateWidgetRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        themeId:
+          type: string
+          format: uuid
+          nullable: true
+    DuplicateWidgetRequest:
+      type: object
+      required: [createdBy]
+      properties:
+        createdBy:
+          type: string
+          format: uuid
+    WidgetResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Widget'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    WidgetListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Widget'
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+  responses:
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: Validation failed
+              details:
+                fields:
+                  name: [Name is required]
+            message: Validation failed
+            timestamp: '2026-08-05T12:00:00.000Z'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: Business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

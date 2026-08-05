@@ -40,6 +40,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class UnprocessableEntityError extends AppError {
+  constructor(message = 'Unprocessable entity', details?: Record<string, unknown>) {
+    super(422, 'UNPROCESSABLE_ENTITY', message, details);
+  }
+}
+
 export class UnauthorizedError extends AppError {
   constructor(message = 'Unauthorized') {
     super(401, 'UNAUTHORIZED', message);

@@ -1,6 +1,12 @@
 /**
- * Request validators placeholder.
- * Zod validation schemas will be implemented alongside API endpoints in Phase 2.
+ * Request validators re-export.
+ * Widget Zod schemas live in `src/schemas/widget.schema.ts`.
  */
 
-export {};
+export {
+  createWidgetBodySchema,
+  duplicateWidgetBodySchema,
+  listWidgetsQuerySchema,
+  updateWidgetBodySchema,
+  widgetIdParamsSchema,
+} from '../schemas/widget.schema.js';

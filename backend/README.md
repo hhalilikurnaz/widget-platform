@@ -305,6 +305,92 @@ Seed creates:
 
 **Tenant scoping:** `workspaceId` on `Submission` and `AnalyticsEvent` for multi-tenant queries without joins
 
+## Widget API (Phase 3)
+
+Base prefix: `/api/v1`
+
+OpenAPI spec: [`docs/openapi.yaml`](./docs/openapi.yaml)
+
+### Endpoints
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/api/v1/widgets` | List widgets (pagination, search, sort, filter) |
+| `POST` | `/api/v1/widgets` | Create widget |
+| `GET` | `/api/v1/widgets/:id` | Get widget by ID |
+| `PATCH` | `/api/v1/widgets/:id` | Update widget metadata |
+| `DELETE` | `/api/v1/widgets/:id` | Soft delete widget |
+| `POST` | `/api/v1/widgets/:id/archive` | Archive widget |
+| `POST` | `/api/v1/widgets/:id/restore` | Restore archived widget |
+| `POST` | `/api/v1/widgets/:id/duplicate` | Duplicate widget |
+
+### Create Widget
+
+```bash
+curl -X POST http://localhost:4000/api/v1/widgets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspaceId": "YOUR_WORKSPACE_ID",
+    "name": "Contact Us",
+    "description": "Primary contact form",
+    "createdBy": "YOUR_USER_ID"
+  }'
+```
+
+Response (`201`):
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "workspaceId": "uuid",
+    "name": "Contact Us",
+    "slug": "contact-us",
+    "status": "DRAFT",
+    "embedToken": "wt_...",
+    "createdAt": "2026-08-05T12:00:00.000Z",
+    "updatedAt": "2026-08-05T12:00:00.000Z"
+  },
+  "message": "Widget created",
+  "timestamp": "2026-08-05T12:00:00.000Z"
+}
+```
+
+### List Widgets
+
+```bash
+curl "http://localhost:4000/api/v1/widgets?workspaceId=YOUR_WORKSPACE_ID&page=1&limit=25&search=contact&sort=updatedAt&order=desc&status=DRAFT"
+```
+
+Response (`200`):
+
+```json
+{
+  "success": true,
+  "data": [],
+  "meta": {
+    "page": 1,
+    "limit": 25,
+    "total": 0,
+    "totalPages": 0
+  },
+  "message": null,
+  "timestamp": "2026-08-05T12:00:00.000Z"
+}
+```
+
+### Business Rules
+
+- Widget name is required
+- Slug is generated automatically and unique per workspace
+- Embed token is generated automatically on create
+- New widgets start as `DRAFT`
+- Archive cannot run twice on the same widget
+- Restore only works for archived widgets
+- Duplicate creates new UUID, slug, embed token, timestamps, and `DRAFT` status
+- Delete is soft delete via `deletedAt`
+
 ## Environment Variables
 
 | Variable                    | Required | Description                                  |
@@ -415,30 +501,30 @@ Sensitive data (passwords, tokens, PII) is never logged.
 
 | Error Class           | HTTP Status | Code                    |
 | --------------------- | ----------- | ----------------------- |
-| `ValidationError`     | 400         | `VALIDATION_ERROR`      |
-| `UnauthorizedError`   | 401         | `UNAUTHORIZED`          |
-| `NotFoundError`       | 404         | `NOT_FOUND`             |
-| `ConflictError`       | 409         | `CONFLICT`              |
-| `InternalServerError` | 500         | `INTERNAL_SERVER_ERROR` |
+| `ValidationError`         | 400         | `VALIDATION_ERROR`      |
+| `UnauthorizedError`       | 401         | `UNAUTHORIZED`          |
+| `NotFoundError`           | 404         | `NOT_FOUND`             |
+| `ConflictError`           | 409         | `CONFLICT`              |
+| `UnprocessableEntityError`| 422         | `UNPROCESSABLE_ENTITY`  |
+| `InternalServerError`     | 500         | `INTERNAL_SERVER_ERROR` |
 
 ## Future Phases
 
-### Phase 3 — REST APIs & Auth
+### Phase 4 — Auth & Builder Workflow
 
 - Authentication (JWT + refresh tokens)
-- Widget CRUD APIs
-- Workspace management
-- Repository implementations
-- Publish pipeline services
+- Authorization middleware
+- Widget schema update endpoints
+- Publish / unpublish pipeline
 
-### Phase 4 — Runtime & Submissions
+### Phase 5 — Runtime & Submissions
 
 - Public widget config endpoint
 - Submission ingestion
 - Analytics event tracking
 - Rate limiting per endpoint category
 
-### Phase 5 — Advanced Features
+### Phase 6 — Advanced Features
 
 - AI assistant integration
 - Template marketplace APIs
@@ -446,12 +532,11 @@ Sensitive data (passwords, tokens, PII) is never logged.
 - Webhook dispatch
 - Redis caching
 
-### Phase 6 — Production Hardening
+### Phase 7 — Production Hardening
 
 - Audit logging
 - Multi-tenant isolation tests
 - Performance optimization
-- OpenAPI specification
 - Docker deployment
 
 ## Related Documentation
