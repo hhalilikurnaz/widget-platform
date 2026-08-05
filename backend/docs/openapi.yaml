@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Widget Platform API
   version: 1.0.0
-  description: Widget Management and Schema API for Widget Platform (Phase 3–4)
+  description: Widget Management, Schema, and Publishing API for Widget Platform (Phase 3–5)
 servers:
   - url: http://localhost:4000
     description: Local development
@@ -308,6 +308,97 @@ paths:
                 $ref: '#/components/schemas/WidgetSchemaValidationResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
+  /api/v1/widgets/{id}/publish:
+    post:
+      tags: [Widgets]
+      summary: Publish widget
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '200':
+          description: Widget published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishWidgetResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/v1/widgets/{id}/unpublish:
+    post:
+      tags: [Widgets]
+      summary: Unpublish widget
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '200':
+          description: Widget unpublished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnpublishWidgetResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/v1/widgets/{id}/versions:
+    get:
+      tags: [Widgets]
+      summary: List widget version history
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '200':
+          description: Version history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetVersionListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/versions/{versionId}:
+    get:
+      tags: [Widgets]
+      summary: Get widget version detail
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - in: path
+          name: versionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Version detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetVersionDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/versions/{versionId}/restore:
+    post:
+      tags: [Widgets]
+      summary: Restore widget version as new draft
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - in: path
+          name: versionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Version restored as new draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreVersionResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   parameters:
     WidgetId:
@@ -564,6 +655,153 @@ components:
           example: true
         data:
           $ref: '#/components/schemas/WidgetSchemaValidationPayload'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    PublishWidgetResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PUBLISHED]
+        version:
+          type: integer
+        versionId:
+          type: string
+          format: uuid
+        embedToken:
+          type: string
+        embedSnippet:
+          type: string
+        publicConfigUrl:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+    PublishWidgetResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/PublishWidgetResult'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    UnpublishWidgetResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [DRAFT]
+        publishedAt:
+          type: 'null'
+    UnpublishWidgetResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/UnpublishWidgetResult'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    WidgetVersionSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        published:
+          type: boolean
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        author:
+          type: string
+          format: uuid
+    WidgetVersionDetail:
+      allOf:
+        - $ref: '#/components/schemas/WidgetVersionSummary'
+        - type: object
+          properties:
+            widgetId:
+              type: string
+              format: uuid
+            schema:
+              $ref: '#/components/schemas/WidgetSchemaDocument'
+    WidgetVersionListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WidgetVersionSummary'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    WidgetVersionDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/WidgetVersionDetail'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    RestoreVersionResult:
+      type: object
+      properties:
+        widgetId:
+          type: string
+          format: uuid
+        versionId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        status:
+          type: string
+          enum: [DRAFT]
+        restoredFromVersion:
+          type: integer
+    RestoreVersionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/RestoreVersionResult'
         message:
           type: string
           nullable: true

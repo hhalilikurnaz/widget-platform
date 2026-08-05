@@ -2,8 +2,10 @@ import { Router } from 'express';
 
 import { widgetController } from '../controllers/widget.controller.js';
 import { widgetSchemaController } from '../controllers/widget-schema.controller.js';
+import { widgetVersionController } from '../controllers/widget-version.controller.js';
 import { validateRequest } from '../middlewares/validate.middleware.js';
 import { widgetSchemaBodySchema } from '../schemas/widget-schema.schema.js';
+import { widgetVersionParamsSchema } from '../schemas/widget-version.schema.js';
 import {
   createWidgetBodySchema,
   duplicateWidgetBodySchema,
@@ -40,6 +42,36 @@ router.post(
   '/:id/schema/validate',
   validateRequest({ params: widgetIdParamsSchema, body: widgetSchemaBodySchema }),
   widgetSchemaController.validateSchema,
+);
+
+router.post(
+  '/:id/publish',
+  validateRequest({ params: widgetIdParamsSchema }),
+  widgetVersionController.publishWidget,
+);
+
+router.post(
+  '/:id/unpublish',
+  validateRequest({ params: widgetIdParamsSchema }),
+  widgetVersionController.unpublishWidget,
+);
+
+router.get(
+  '/:id/versions',
+  validateRequest({ params: widgetIdParamsSchema }),
+  widgetVersionController.listVersions,
+);
+
+router.get(
+  '/:id/versions/:versionId',
+  validateRequest({ params: widgetVersionParamsSchema }),
+  widgetVersionController.getVersion,
+);
+
+router.post(
+  '/:id/versions/:versionId/restore',
+  validateRequest({ params: widgetVersionParamsSchema }),
+  widgetVersionController.restoreVersion,
 );
 
 router.get('/:id', validateRequest({ params: widgetIdParamsSchema }), widgetController.getWidget);

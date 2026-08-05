@@ -467,6 +467,81 @@ curl -X PUT http://localhost:4000/api/v1/widgets/WIDGET_ID/schema \
 - Field ids must be unique within a schema
 - Supported field types: text, email, phone, number, textarea, select, checkbox, radio, date, url, hidden
 
+## Publishing & Versioning (Phase 5)
+
+Base prefix: `/api/v1`
+
+### Endpoints
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `POST` | `/api/v1/widgets/:id/publish` | Publish current draft as immutable version |
+| `POST` | `/api/v1/widgets/:id/unpublish` | Unpublish widget |
+| `GET` | `/api/v1/widgets/:id/versions` | List version history |
+| `GET` | `/api/v1/widgets/:id/versions/:versionId` | Get version detail |
+| `POST` | `/api/v1/widgets/:id/versions/:versionId/restore` | Restore version as new draft |
+
+### Lifecycle
+
+```text
+DRAFT (editable)
+   │
+   ▼ publish ──► PUBLISHED (immutable version created)
+   │
+   ▼ unpublish ► DRAFT (widget status only; history preserved)
+   │
+   ▼ restore version ──► new DRAFT (incremented version number)
+```
+
+### Publish Widget
+
+```bash
+curl -X POST http://localhost:4000/api/v1/widgets/WIDGET_ID/publish
+```
+
+Response (`200`):
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "status": "PUBLISHED",
+    "version": 2,
+    "versionId": "uuid",
+    "embedToken": "wt_...",
+    "embedSnippet": "<script src=\"https://cdn.widgetplatform.com/v1/wt_....js\" async></script>",
+    "publicConfigUrl": "https://api.widgetplatform.com/api/v1/public/widgets/wt_.../config",
+    "publishedAt": "2026-08-05T12:00:00.000Z"
+  },
+  "message": "Widget published",
+  "timestamp": "2026-08-05T12:00:00.000Z"
+}
+```
+
+### Version History
+
+```bash
+curl http://localhost:4000/api/v1/widgets/WIDGET_ID/versions
+```
+
+### Restore Version
+
+```bash
+curl -X POST http://localhost:4000/api/v1/widgets/WIDGET_ID/versions/VERSION_ID/restore
+```
+
+Creates a **new** draft version copied from the selected historical version. History is never mutated.
+
+### Business Rules
+
+- Publishing creates a new immutable version (v1, v2, v3…)
+- Version numbers always increment and are never reused
+- Published versions cannot be edited
+- Restore copies a historical version into a new draft
+- Publish validation requires name, valid schema, active draft, and no slug conflict
+- Unpublish sets widget status back to `DRAFT`
+
 ## Environment Variables
 
 | Variable                    | Required | Description                                  |

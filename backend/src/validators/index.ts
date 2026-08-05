@@ -12,3 +12,4 @@ export {
 } from '../schemas/widget.schema.js';
 
 export { widgetSchemaBodySchema } from '../schemas/widget-schema.schema.js';
+export { widgetVersionParamsSchema } from '../schemas/widget-version.schema.js';
