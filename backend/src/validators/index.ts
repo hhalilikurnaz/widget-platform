@@ -10,3 +10,5 @@ export {
   updateWidgetBodySchema,
   widgetIdParamsSchema,
 } from '../schemas/widget.schema.js';
+
+export { widgetSchemaBodySchema } from '../schemas/widget-schema.schema.js';

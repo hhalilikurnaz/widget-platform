@@ -1,7 +1,7 @@
-import type { Prisma } from '@prisma/client';
 import type { Widget } from '@prisma/client';
 
 import type { WidgetDto } from '../types/widget.types.js';
+import { createDefaultSchema } from './schema-default.js';
 
 export function toWidgetDto(widget: Widget): WidgetDto {
   return {
@@ -22,13 +22,6 @@ export function toWidgetDto(widget: Widget): WidgetDto {
   };
 }
 
-export function createDefaultSchemaJson(name: string): Prisma.InputJsonValue {
-  return {
-    version: 1,
-    metadata: { name },
-    content: { title: name, subtitle: '' },
-    components: [],
-    behavior: {},
-    triggers: {},
-  };
+export function createDefaultSchemaJson(name: string) {
+  return createDefaultSchema(name);
 }

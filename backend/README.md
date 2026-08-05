@@ -391,6 +391,82 @@ Response (`200`):
 - Duplicate creates new UUID, slug, embed token, timestamps, and `DRAFT` status
 - Delete is soft delete via `deletedAt`
 
+## Schema API (Phase 4)
+
+Base prefix: `/api/v1`
+
+The Schema API powers the Visual Builder auto-save workflow. It reads and writes draft widget schemas stored on the current `WidgetVersion`.
+
+### Endpoints
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/api/v1/widgets/:id/schema` | Get current draft schema |
+| `PUT` | `/api/v1/widgets/:id/schema` | Replace widget schema |
+| `POST` | `/api/v1/widgets/:id/schema/reset` | Restore default schema template |
+| `POST` | `/api/v1/widgets/:id/schema/validate` | Validate schema without saving |
+
+### Schema Structure
+
+Every widget schema is a versioned JSON document:
+
+```json
+{
+  "version": 1,
+  "content": {},
+  "layout": {},
+  "theme": {},
+  "fields": [],
+  "behavior": {},
+  "triggers": {},
+  "localization": {},
+  "animations": {},
+  "metadata": {}
+}
+```
+
+Legacy schemas that use `components` are normalized on read and validated for backward compatibility.
+
+### Builder Workflow
+
+1. Builder loads schema via `GET /api/v1/widgets/:id/schema`
+2. User edits in Visual Builder (auto-save every 10 seconds)
+3. Builder sends full schema via `PUT /api/v1/widgets/:id/schema`
+4. Builder validates locally and via `POST /api/v1/widgets/:id/schema/validate`
+5. Reset restores the default template via `POST /api/v1/widgets/:id/schema/reset`
+
+### Update Schema
+
+```bash
+curl -X PUT http://localhost:4000/api/v1/widgets/WIDGET_ID/schema \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schema": {
+      "version": 1,
+      "content": { "title": "Contact Us" },
+      "layout": { "type": "popup", "width": "480px", "alignment": "center" },
+      "theme": {},
+      "fields": [
+        { "id": "field-name", "type": "text", "label": "Full Name", "required": true }
+      ],
+      "behavior": {},
+      "triggers": { "type": "immediate" },
+      "localization": { "defaultLocale": "en", "locales": {} },
+      "animations": {},
+      "metadata": { "name": "Contact Us" }
+    }
+  }'
+```
+
+### Business Rules
+
+- Schema belongs to the current `WidgetVersion`
+- Only unpublished draft versions can be edited or reset
+- Published versions remain immutable (422)
+- Validation endpoint performs validation only (no database writes)
+- Field ids must be unique within a schema
+- Supported field types: text, email, phone, number, textarea, select, checkbox, radio, date, url, hidden
+
 ## Environment Variables
 
 | Variable                    | Required | Description                                  |

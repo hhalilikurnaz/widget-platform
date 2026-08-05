@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Widget Platform API
   version: 1.0.0
-  description: Widget Management API for Widget Platform (Phase 3)
+  description: Widget Management and Schema API for Widget Platform (Phase 3–4)
 servers:
   - url: http://localhost:4000
     description: Local development
@@ -207,6 +207,107 @@ paths:
                 $ref: '#/components/schemas/WidgetResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/schema:
+    get:
+      tags: [Widgets]
+      summary: Get widget draft schema
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '200':
+          description: Current draft schema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetSchemaResponse'
+              example:
+                success: true
+                data:
+                  widgetId: 11111111-1111-1111-1111-111111111111
+                  versionId: 22222222-2222-2222-2222-222222222222
+                  version: 1
+                  published: false
+                  schema:
+                    version: 1
+                    content:
+                      title: Contact Us
+                    layout:
+                      type: popup
+                    theme: {}
+                    fields: []
+                    behavior: {}
+                    triggers:
+                      type: immediate
+                    localization:
+                      defaultLocale: en
+                    animations: {}
+                    metadata:
+                      name: Contact Us
+                  updatedAt: '2026-08-05T12:00:00.000Z'
+                message: null
+                timestamp: '2026-08-05T12:00:00.000Z'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Widgets]
+      summary: Update widget schema
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WidgetSchemaRequest'
+      responses:
+        '200':
+          description: Schema updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetSchemaResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/v1/widgets/{id}/schema/reset:
+    post:
+      tags: [Widgets]
+      summary: Reset widget schema to default template
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '200':
+          description: Schema reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetSchemaResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/v1/widgets/{id}/schema/validate:
+    post:
+      tags: [Widgets]
+      summary: Validate widget schema without saving
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WidgetSchemaRequest'
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetSchemaValidationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
 components:
   parameters:
     WidgetId:
@@ -341,6 +442,128 @@ components:
               type: integer
             totalPages:
               type: integer
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    WidgetSchemaDocument:
+      type: object
+      required:
+        - version
+        - content
+        - layout
+        - theme
+        - fields
+        - behavior
+        - triggers
+        - localization
+        - animations
+        - metadata
+      properties:
+        version:
+          type: integer
+          example: 1
+        content:
+          type: object
+        layout:
+          type: object
+        theme:
+          type: object
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/WidgetField'
+        behavior:
+          type: object
+        triggers:
+          type: object
+        localization:
+          type: object
+        animations:
+          type: object
+        metadata:
+          type: object
+    WidgetField:
+      type: object
+      required: [id, type, label]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [text, email, phone, number, textarea, select, checkbox, radio, date, url, hidden]
+        label:
+          type: string
+        required:
+          type: boolean
+        placeholder:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+    WidgetSchemaRequest:
+      type: object
+      required: [schema]
+      properties:
+        schema:
+          $ref: '#/components/schemas/WidgetSchemaDocument'
+    WidgetSchemaPayload:
+      type: object
+      properties:
+        widgetId:
+          type: string
+          format: uuid
+        versionId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        published:
+          type: boolean
+        schema:
+          $ref: '#/components/schemas/WidgetSchemaDocument'
+        updatedAt:
+          type: string
+          format: date-time
+    WidgetSchemaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/WidgetSchemaPayload'
+        message:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+    WidgetSchemaValidationPayload:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              message:
+                type: string
+    WidgetSchemaValidationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/WidgetSchemaValidationPayload'
         message:
           type: string
           nullable: true

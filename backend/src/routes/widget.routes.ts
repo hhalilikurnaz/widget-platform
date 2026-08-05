@@ -1,7 +1,9 @@
 import { Router } from 'express';
 
 import { widgetController } from '../controllers/widget.controller.js';
+import { widgetSchemaController } from '../controllers/widget-schema.controller.js';
 import { validateRequest } from '../middlewares/validate.middleware.js';
+import { widgetSchemaBodySchema } from '../schemas/widget-schema.schema.js';
 import {
   createWidgetBodySchema,
   duplicateWidgetBodySchema,
@@ -15,6 +17,30 @@ const router = Router();
 router.get('/', validateRequest({ query: listWidgetsQuerySchema }), widgetController.listWidgets);
 
 router.post('/', validateRequest({ body: createWidgetBodySchema }), widgetController.createWidget);
+
+router.get(
+  '/:id/schema',
+  validateRequest({ params: widgetIdParamsSchema }),
+  widgetSchemaController.getSchema,
+);
+
+router.put(
+  '/:id/schema',
+  validateRequest({ params: widgetIdParamsSchema, body: widgetSchemaBodySchema }),
+  widgetSchemaController.updateSchema,
+);
+
+router.post(
+  '/:id/schema/reset',
+  validateRequest({ params: widgetIdParamsSchema }),
+  widgetSchemaController.resetSchema,
+);
+
+router.post(
+  '/:id/schema/validate',
+  validateRequest({ params: widgetIdParamsSchema, body: widgetSchemaBodySchema }),
+  widgetSchemaController.validateSchema,
+);
 
 router.get('/:id', validateRequest({ params: widgetIdParamsSchema }), widgetController.getWidget);
 
