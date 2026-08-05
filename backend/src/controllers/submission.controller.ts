@@ -9,7 +9,7 @@ import type {
 } from '../schemas/submission.schema.js';
 import type { WidgetIdParams } from '../schemas/widget.schema.js';
 import { submissionService } from '../services/submission.service.js';
-import { getWorkspaceScope } from '../utils/request-auth.js';
+import { getWidgetScope } from '../utils/request-auth.js';
 import { sendSuccess } from '../utils/response.js';
 
 export class SubmissionController {
@@ -17,8 +17,8 @@ export class SubmissionController {
     try {
       const { id } = req.params as WidgetIdParams;
       const query = req.validatedQuery as ListSubmissionsQuery;
-      const { workspaceId } = getWorkspaceScope(req);
-      const result = await submissionService.listSubmissions(workspaceId, id, query);
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      const result = await submissionService.listSubmissions(workspaceId, id, query, widget);
 
       sendSuccess(res, result.items, { meta: result.meta });
     } catch (error) {
@@ -29,8 +29,8 @@ export class SubmissionController {
   getSubmission = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id, submissionId } = req.params as SubmissionParams;
-      const { workspaceId } = getWorkspaceScope(req);
-      const submission = await submissionService.getSubmission(workspaceId, id, submissionId);
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      const submission = await submissionService.getSubmission(workspaceId, id, submissionId, widget);
 
       sendSuccess(res, submission);
     } catch (error) {
@@ -41,8 +41,8 @@ export class SubmissionController {
   deleteSubmission = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id, submissionId } = req.params as SubmissionParams;
-      const { workspaceId } = getWorkspaceScope(req);
-      await submissionService.deleteSubmission(workspaceId, id, submissionId);
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      await submissionService.deleteSubmission(workspaceId, id, submissionId, widget);
 
       res.status(204).send();
     } catch (error) {
@@ -54,8 +54,8 @@ export class SubmissionController {
     try {
       const { id } = req.params as WidgetIdParams;
       const body = req.body as ExportSubmissionsBody;
-      const { workspaceId } = getWorkspaceScope(req);
-      const csv = await submissionService.exportSubmissions(workspaceId, id, body);
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      const csv = await submissionService.exportSubmissions(workspaceId, id, body, widget);
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename="submissions.csv"');

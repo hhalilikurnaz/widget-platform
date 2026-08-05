@@ -7,7 +7,7 @@ import type {
   WidgetIdParams,
 } from '../schemas/widget.schema.js';
 import { widgetService } from '../services/widget.service.js';
-import { getWorkspaceScope } from '../utils/request-auth.js';
+import { getWidgetScope, getWorkspaceScope } from '../utils/request-auth.js';
 import { sendSuccess } from '../utils/response.js';
 
 export class WidgetController {
@@ -26,9 +26,9 @@ export class WidgetController {
   getWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const { workspaceId } = getWorkspaceScope(req);
-      const widget = await widgetService.getWidget(workspaceId, id);
-      sendSuccess(res, widget);
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      const result = await widgetService.getWidget(workspaceId, id, widget);
+      sendSuccess(res, result);
     } catch (error) {
       next(error);
     }
@@ -49,9 +49,9 @@ export class WidgetController {
     try {
       const { id } = req.params as WidgetIdParams;
       const body = req.body as UpdateWidgetBody;
-      const { workspaceId } = getWorkspaceScope(req);
-      const widget = await widgetService.updateWidget(workspaceId, id, body);
-      sendSuccess(res, widget, { message: 'Widget updated' });
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      const updated = await widgetService.updateWidget(workspaceId, id, body, widget);
+      sendSuccess(res, updated, { message: 'Widget updated' });
     } catch (error) {
       next(error);
     }
@@ -60,9 +60,9 @@ export class WidgetController {
   archiveWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const { workspaceId } = getWorkspaceScope(req);
-      const widget = await widgetService.archiveWidget(workspaceId, id);
-      sendSuccess(res, widget, { message: 'Widget archived' });
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      const archived = await widgetService.archiveWidget(workspaceId, id, widget);
+      sendSuccess(res, archived, { message: 'Widget archived' });
     } catch (error) {
       next(error);
     }
@@ -71,9 +71,9 @@ export class WidgetController {
   restoreWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const { workspaceId } = getWorkspaceScope(req);
-      const widget = await widgetService.restoreWidget(workspaceId, id);
-      sendSuccess(res, widget, { message: 'Widget restored' });
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      const restored = await widgetService.restoreWidget(workspaceId, id, widget);
+      sendSuccess(res, restored, { message: 'Widget restored' });
     } catch (error) {
       next(error);
     }
@@ -82,7 +82,7 @@ export class WidgetController {
   duplicateWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const { workspaceId, userId } = getWorkspaceScope(req);
+      const { workspaceId, userId } = getWidgetScope(req, id);
       const widget = await widgetService.duplicateWidget(workspaceId, id, userId);
       sendSuccess(res, widget, { statusCode: 201, message: 'Widget duplicated' });
     } catch (error) {
@@ -93,8 +93,8 @@ export class WidgetController {
   deleteWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const { workspaceId } = getWorkspaceScope(req);
-      await widgetService.deleteWidget(workspaceId, id);
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      await widgetService.deleteWidget(workspaceId, id, widget);
       res.status(204).send();
     } catch (error) {
       next(error);

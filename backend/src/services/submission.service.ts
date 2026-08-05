@@ -1,9 +1,11 @@
+import type { Widget } from '@prisma/client';
+
 import { DUPLICATE_SUBMISSION_WINDOW_MS } from '../constants/index.js';
 import { ConflictError, NotFoundError, ValidationError } from '../errors/index.js';
 import { logger } from '../logger/index.js';
 import { runtimeRepository } from '../repositories/runtime.repository.js';
 import { submissionRepository } from '../repositories/submission.repository.js';
-import { requireWidgetInWorkspace } from '../utils/workspace-access.js';
+import { ensureWidgetInWorkspace } from '../utils/workspace-access.js';
 import type {
   ExportSubmissionsBody,
   ListSubmissionsQuery,
@@ -67,30 +69,26 @@ export class SubmissionService {
 
     const ipHash = hashIp(context.ipAddress);
     const since = new Date(Date.now() - DUPLICATE_SUBMISSION_WINDOW_MS);
-    const duplicate = await submissionRepository.findRecentDuplicate({
-      widgetId: record.widget.id,
-      ipHash,
-      payload: body.fields,
+    const result = await submissionRepository.createSubmissionIfNotDuplicate(
+      {
+        workspaceId: record.widget.workspaceId,
+        widgetId: record.widget.id,
+        widgetVersionId: record.publishedVersion.id,
+        payload: body.fields,
+        country: body.metadata?.country ?? context.metadata?.country,
+        browser: body.metadata?.browser ?? context.metadata?.browser,
+        device: body.metadata?.device ?? context.metadata?.device,
+        userAgent: context.userAgent,
+        referrer: body.metadata?.referrer ?? body.metadata?.pageUrl ?? context.metadata?.referrer,
+        ipHash,
+      },
       since,
-    });
+    );
 
-    if (duplicate) {
+    if (result === 'duplicate') {
       logger.info({ embedToken, widgetId: record.widget.id }, 'Submission rejected');
       throw new ConflictError('Duplicate submission detected');
     }
-
-    await submissionRepository.createSubmission({
-      workspaceId: record.widget.workspaceId,
-      widgetId: record.widget.id,
-      widgetVersionId: record.publishedVersion.id,
-      payload: body.fields,
-      country: body.metadata?.country ?? context.metadata?.country,
-      browser: body.metadata?.browser ?? context.metadata?.browser,
-      device: body.metadata?.device ?? context.metadata?.device,
-      userAgent: context.userAgent,
-      referrer: body.metadata?.referrer ?? body.metadata?.pageUrl ?? context.metadata?.referrer,
-      ipHash,
-    });
 
     logger.info({ embedToken, widgetId: record.widget.id }, 'Submission stored');
 
@@ -101,8 +99,9 @@ export class SubmissionService {
     workspaceId: string,
     widgetId: string,
     query: ListSubmissionsQuery,
+    preloaded?: Widget,
   ): Promise<PaginatedSubmissions> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
 
     const pagination = parsePagination(query.page, query.limit);
     const { items, total } = await submissionRepository.findSubmissions({
@@ -131,8 +130,9 @@ export class SubmissionService {
     workspaceId: string,
     widgetId: string,
     submissionId: string,
+    preloaded?: Widget,
   ): Promise<SubmissionDetailDto> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
 
     const submission = await submissionRepository.findSubmission(workspaceId, widgetId, submissionId);
     if (!submission) {
@@ -142,8 +142,13 @@ export class SubmissionService {
     return toSubmissionDetail(submission, submission.widget.name);
   }
 
-  async deleteSubmission(workspaceId: string, widgetId: string, submissionId: string): Promise<void> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+  async deleteSubmission(
+    workspaceId: string,
+    widgetId: string,
+    submissionId: string,
+    preloaded?: Widget,
+  ): Promise<void> {
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
 
     const submission = await submissionRepository.findSubmission(workspaceId, widgetId, submissionId);
     if (!submission) {
@@ -153,8 +158,13 @@ export class SubmissionService {
     await submissionRepository.deleteSubmission(workspaceId, widgetId, submissionId);
   }
 
-  async exportSubmissions(workspaceId: string, widgetId: string, body: ExportSubmissionsBody): Promise<string> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+  async exportSubmissions(
+    workspaceId: string,
+    widgetId: string,
+    body: ExportSubmissionsBody,
+    preloaded?: Widget,
+  ): Promise<string> {
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
 
     const rows = await submissionRepository.exportSubmissions({
       workspaceId,

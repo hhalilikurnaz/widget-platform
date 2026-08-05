@@ -1,4 +1,4 @@
-import { Prisma, type AnalyticsEventType } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { prisma } from '../database/prisma.js';
 import type {
@@ -345,21 +345,6 @@ export class AnalyticsRepository {
     });
 
     return record?.id ?? null;
-  }
-
-  isSupportedEventType(value: string): value is AnalyticsEventType {
-    return (
-      value === 'VIEW' ||
-      value === 'OPEN' ||
-      value === 'START' ||
-      value === 'FIELD_FOCUS' ||
-      value === 'FIELD_BLUR' ||
-      value === 'FIELD_CHANGE' ||
-      value === 'SUBMIT' ||
-      value === 'SUCCESS' ||
-      value === 'ERROR' ||
-      value === 'CLOSE'
-    );
   }
 }
 

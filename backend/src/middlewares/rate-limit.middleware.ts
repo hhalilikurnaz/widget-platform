@@ -16,6 +16,7 @@ export const globalRateLimiter = rateLimit({
   max: RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path === '/health',
   message: {
     success: false,
     error: {

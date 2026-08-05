@@ -7,9 +7,6 @@ const prismaMock = vi.hoisted(() => ({
   widget: {
     findFirst: vi.fn(),
   },
-  widgetVersion: {
-    findFirst: vi.fn(),
-  },
 }));
 
 vi.mock('../../src/database/prisma.js', () => ({
@@ -32,23 +29,22 @@ describe('RuntimeRepository', () => {
       status: 'PUBLISHED',
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
       theme: null,
-    });
-    prismaMock.widgetVersion.findFirst.mockResolvedValue({
-      id: 'version-2',
-      version: 2,
-      schemaJson: createDefaultSchema('Contact Us'),
-      published: true,
-      publishedAt: new Date('2026-01-02T00:00:00.000Z'),
-      createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      versions: [
+        {
+          id: 'version-2',
+          version: 2,
+          schemaJson: createDefaultSchema('Contact Us'),
+          published: true,
+          publishedAt: new Date('2026-01-02T00:00:00.000Z'),
+          createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        },
+      ],
     });
 
     const record = await repository.findPublishedByEmbedToken('wt_testtoken123456789012345678');
 
     expect(record?.publishedVersion.version).toBe(2);
-    expect(prismaMock.widgetVersion.findFirst).toHaveBeenCalledWith({
-      where: { widgetId: 'widget-1', published: true },
-      orderBy: { version: 'desc' },
-    });
+    expect(prismaMock.widget.findFirst).toHaveBeenCalledOnce();
   });
 
   it('getPublicConfig returns null for missing widgets', async () => {
@@ -68,14 +64,16 @@ describe('RuntimeRepository', () => {
       status: 'PUBLISHED',
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
       theme: null,
-    });
-    prismaMock.widgetVersion.findFirst.mockResolvedValue({
-      id: 'version-2',
-      version: 2,
-      schemaJson: createDefaultSchema('Contact Us'),
-      published: true,
-      publishedAt: new Date('2026-01-02T00:00:00.000Z'),
-      createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      versions: [
+        {
+          id: 'version-2',
+          version: 2,
+          schemaJson: createDefaultSchema('Contact Us'),
+          published: true,
+          publishedAt: new Date('2026-01-02T00:00:00.000Z'),
+          createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        },
+      ],
     });
 
     const runtime = await repository.getRuntime('wt_testtoken123456789012345678');

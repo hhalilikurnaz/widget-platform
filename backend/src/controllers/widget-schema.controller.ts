@@ -3,14 +3,14 @@ import type { NextFunction, Request, Response } from 'express';
 import type { WidgetIdParams } from '../schemas/widget.schema.js';
 import type { WidgetSchemaBody } from '../schemas/widget-schema.schema.js';
 import { widgetSchemaService } from '../services/widget-schema.service.js';
-import { getWorkspaceScope } from '../utils/request-auth.js';
+import { getWidgetScope } from '../utils/request-auth.js';
 import { sendSuccess } from '../utils/response.js';
 
 export class WidgetSchemaController {
   getSchema = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const { workspaceId } = getWorkspaceScope(req);
+      const { workspaceId } = getWidgetScope(req, id);
       const schema = await widgetSchemaService.getSchema(id, workspaceId);
       sendSuccess(res, schema);
     } catch (error) {
@@ -22,8 +22,8 @@ export class WidgetSchemaController {
     try {
       const { id } = req.params as WidgetIdParams;
       const body = req.body as WidgetSchemaBody;
-      const { workspaceId } = getWorkspaceScope(req);
-      const schema = await widgetSchemaService.updateSchema(id, workspaceId, body.schema);
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      const schema = await widgetSchemaService.updateSchema(id, workspaceId, body.schema, widget);
       sendSuccess(res, schema, { message: 'Schema updated' });
     } catch (error) {
       next(error);
@@ -33,8 +33,8 @@ export class WidgetSchemaController {
   resetSchema = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const { workspaceId } = getWorkspaceScope(req);
-      const schema = await widgetSchemaService.resetSchema(id, workspaceId);
+      const { workspaceId, widget } = getWidgetScope(req, id);
+      const schema = await widgetSchemaService.resetSchema(id, workspaceId, widget);
       sendSuccess(res, schema, { message: 'Schema reset' });
     } catch (error) {
       next(error);

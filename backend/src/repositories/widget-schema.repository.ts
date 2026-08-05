@@ -55,30 +55,22 @@ export class WidgetSchemaRepository {
     };
   }
 
-  async updateSchema(versionId: string, schemaJson: Prisma.InputJsonValue): Promise<WidgetVersion> {
-    return this.updateCurrentVersion(versionId, schemaJson);
-  }
-
-  async resetSchema(versionId: string, schemaJson: Prisma.InputJsonValue): Promise<WidgetVersion> {
-    return this.updateCurrentVersion(versionId, schemaJson);
-  }
-
-  async updateCurrentVersion(
+  async updateSchemaAndTouchWidget(
     versionId: string,
+    widgetId: string,
     schemaJson: Prisma.InputJsonValue,
-  ): Promise<WidgetVersion> {
-    return prisma.widgetVersion.update({
-      where: { id: versionId },
-      data: { schemaJson },
-    });
-  }
-
-  async touchWidget(widgetId: string): Promise<Date> {
-    const widget = await prisma.widget.update({
-      where: { id: widgetId },
-      data: { updatedAt: new Date() },
-      select: { updatedAt: true },
-    });
+  ): Promise<Date> {
+    const [, widget] = await prisma.$transaction([
+      prisma.widgetVersion.update({
+        where: { id: versionId },
+        data: { schemaJson },
+      }),
+      prisma.widget.update({
+        where: { id: widgetId },
+        data: { updatedAt: new Date() },
+        select: { updatedAt: true },
+      }),
+    ]);
 
     return widget.updatedAt;
   }

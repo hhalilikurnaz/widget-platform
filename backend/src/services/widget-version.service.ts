@@ -1,3 +1,5 @@
+import type { Widget } from '@prisma/client';
+
 import { NotFoundError, UnprocessableEntityError } from '../errors/index.js';
 import { logger } from '../logger/index.js';
 import { widgetRepository } from '../repositories/widget.repository.js';
@@ -9,9 +11,9 @@ import type {
   WidgetVersionDetailDto,
   WidgetVersionSummaryDto,
 } from '../types/widget-version.types.js';
-import { generateEmbedToken } from '../utils/embed-token.js';
 import { validateForPublish } from '../utils/publish-validator.js';
 import { rethrowPrismaConflict } from '../utils/prisma-error.js';
+import { generateUniqueEmbedToken } from '../utils/unique-embed-token.js';
 import {
   cloneSchemaJson,
   toPublishResultDto,
@@ -19,7 +21,7 @@ import {
   toVersionDetailDto,
   toVersionSummaryDto,
 } from '../utils/version-mapper.js';
-import { requireWidgetInWorkspace } from '../utils/workspace-access.js';
+import { ensureWidgetInWorkspace } from '../utils/workspace-access.js';
 
 export class WidgetVersionService {
   async publishWidget(widgetId: string, workspaceId: string): Promise<PublishWidgetResultDto> {
@@ -54,7 +56,7 @@ export class WidgetVersionService {
       throw new UnprocessableEntityError('Current draft version does not exist');
     }
 
-    const embedToken = widgetRecord.embedToken ?? (await this.generateUniqueEmbedToken());
+    const embedToken = widgetRecord.embedToken ?? (await generateUniqueEmbedToken());
 
     let result;
     try {
@@ -104,8 +106,12 @@ export class WidgetVersionService {
     return toUnpublishResultDto(widgetId);
   }
 
-  async listVersions(widgetId: string, workspaceId: string): Promise<WidgetVersionSummaryDto[]> {
-    const widget = await requireWidgetInWorkspace(widgetId, workspaceId);
+  async listVersions(
+    widgetId: string,
+    workspaceId: string,
+    preloaded?: Widget,
+  ): Promise<WidgetVersionSummaryDto[]> {
+    const widget = await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
     const versions = await widgetVersionRepository.getVersions(widgetId);
 
     return versions.map((version) => toVersionSummaryDto(version, widget.createdBy));
@@ -115,8 +121,9 @@ export class WidgetVersionService {
     widgetId: string,
     workspaceId: string,
     versionId: string,
+    preloaded?: Widget,
   ): Promise<WidgetVersionDetailDto> {
-    const widget = await requireWidgetInWorkspace(widgetId, workspaceId);
+    const widget = await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
     const version = await widgetVersionRepository.getVersion(widgetId, versionId);
     if (!version) {
       throw new NotFoundError('Widget version not found');
@@ -129,8 +136,9 @@ export class WidgetVersionService {
     widgetId: string,
     workspaceId: string,
     versionId: string,
+    preloaded?: Widget,
   ): Promise<RestoreVersionResultDto> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
 
     const sourceVersion = await widgetVersionRepository.getVersion(widgetId, versionId);
     if (!sourceVersion) {
@@ -164,21 +172,6 @@ export class WidgetVersionService {
       status: 'DRAFT',
       restoredFromVersion: result.restoredFromVersion,
     };
-  }
-
-  private async generateUniqueEmbedToken(): Promise<string> {
-    let attempt = 0;
-
-    while (attempt < 10) {
-      const token = generateEmbedToken();
-      const exists = await widgetRepository.embedTokenExists(token);
-      if (!exists) {
-        return token;
-      }
-      attempt += 1;
-    }
-
-    throw new UnprocessableEntityError('Unable to generate a unique embed token');
   }
 }
 

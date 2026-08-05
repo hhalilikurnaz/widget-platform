@@ -29,7 +29,7 @@ export class AuthService {
     const platformUser = await userRepository.findByEmail(data.user.email);
 
     if (!platformUser) {
-      logger.info({ email: data.user.email }, 'Authentication failure');
+      logger.info({ supabaseUserId: data.user.id }, 'Authentication failure');
       throw new UnauthorizedError('User is not provisioned for this platform');
     }
 

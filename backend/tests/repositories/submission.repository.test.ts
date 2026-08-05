@@ -2,9 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SubmissionRepository } from '../../src/repositories/submission.repository.js';
 
+const txMock = vi.hoisted(() => ({
+  submission: {
+    findMany: vi.fn(),
+    create: vi.fn(),
+  },
+}));
+
 const prismaMock = vi.hoisted(() => ({
   submission: {
-    create: vi.fn(),
     findMany: vi.fn(),
     findFirst: vi.fn(),
     count: vi.fn(),
@@ -23,9 +29,12 @@ describe('SubmissionRepository', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof txMock) => Promise<unknown>) =>
+      callback(txMock),
+    );
   });
 
-  it('createSubmission stores submission metadata', async () => {
+  it('createSubmissionIfNotDuplicate stores submission metadata', async () => {
     const created = {
       id: 'submission-1',
       workspaceId: 'workspace-1',
@@ -42,23 +51,50 @@ describe('SubmissionRepository', () => {
       deletedAt: null,
     };
 
-    prismaMock.submission.create.mockResolvedValue(created);
+    txMock.submission.findMany.mockResolvedValue([]);
+    txMock.submission.create.mockResolvedValue(created);
 
-    const result = await repository.createSubmission({
-      workspaceId: 'workspace-1',
-      widgetId: 'widget-1',
-      widgetVersionId: 'version-1',
-      payload: { email: 'john@example.com' },
-      country: 'US',
-      browser: 'Chrome',
-      device: 'desktop',
-      userAgent: 'Mozilla/5.0',
-      referrer: 'https://example.com',
-      ipHash: 'hashed-ip',
-    });
+    const result = await repository.createSubmissionIfNotDuplicate(
+      {
+        workspaceId: 'workspace-1',
+        widgetId: 'widget-1',
+        widgetVersionId: 'version-1',
+        payload: { email: 'john@example.com' },
+        country: 'US',
+        browser: 'Chrome',
+        device: 'desktop',
+        userAgent: 'Mozilla/5.0',
+        referrer: 'https://example.com',
+        ipHash: 'hashed-ip',
+      },
+      new Date('2026-01-01T00:00:00.000Z'),
+    );
 
-    expect(result.id).toBe('submission-1');
-    expect(prismaMock.submission.create).toHaveBeenCalledOnce();
+    expect(result).toEqual(created);
+    expect(txMock.submission.create).toHaveBeenCalledOnce();
+  });
+
+  it('createSubmissionIfNotDuplicate returns duplicate when payload matches', async () => {
+    txMock.submission.findMany.mockResolvedValue([
+      {
+        id: 'submission-old',
+        payload: { email: 'john@example.com' },
+      },
+    ]);
+
+    const result = await repository.createSubmissionIfNotDuplicate(
+      {
+        workspaceId: 'workspace-1',
+        widgetId: 'widget-1',
+        widgetVersionId: 'version-1',
+        payload: { email: 'john@example.com' },
+        ipHash: 'hashed-ip',
+      },
+      new Date('2026-01-01T00:00:00.000Z'),
+    );
+
+    expect(result).toBe('duplicate');
+    expect(txMock.submission.create).not.toHaveBeenCalled();
   });
 
   it('findSubmissions applies pagination and filters', async () => {

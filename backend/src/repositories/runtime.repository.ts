@@ -19,24 +19,16 @@ export class RuntimeRepository {
       },
       include: {
         theme: true,
+        versions: {
+          where: { published: true },
+          orderBy: { version: 'desc' },
+          take: 1,
+        },
       },
     });
 
-    if (!widget) {
-      return null;
-    }
-
-    const publishedVersion = await prisma.widgetVersion.findFirst({
-      where: {
-        widgetId: widget.id,
-        published: true,
-      },
-      orderBy: {
-        version: 'desc',
-      },
-    });
-
-    if (!publishedVersion) {
+    const publishedVersion = widget?.versions[0];
+    if (!widget || !publishedVersion) {
       return null;
     }
 

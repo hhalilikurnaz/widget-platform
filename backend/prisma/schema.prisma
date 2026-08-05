@@ -78,6 +78,7 @@ model Workspace {
   submissions     Submission[]
   analyticsEvents AnalyticsEvent[]
 
+  @@index([deletedAt])
   @@map("workspaces")
 }
 
@@ -231,6 +232,7 @@ model Submission {
 
   @@index([workspaceId, widgetId, createdAt])
   @@index([widgetId, createdAt])
+  @@index([widgetId, ipHash, createdAt])
   @@index([widgetId, deletedAt])
   @@index([widgetVersionId])
   @@map("submissions")
@@ -253,5 +255,6 @@ model AnalyticsEvent {
   @@index([widgetId, type, createdAt])
   @@index([sessionId])
   @@index([visitorId])
+  @@index([metadata], type: Gin)
   @@map("analytics_events")
 }

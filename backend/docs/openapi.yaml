@@ -2,12 +2,14 @@ openapi: 3.1.0
 info:
   title: Widget Platform API
   version: 1.0.0
-  description: Widget Platform API including management, schema, publishing, public runtime, submissions, analytics (Phase
-    3–8), and authentication/workspace authorization (Phase 9)
+  description: Widget Platform API — production-ready backend (Phases 1–10). Includes management, schema, publishing, public
+    runtime, submissions, analytics, and authentication/workspace authorization.
 servers:
 - url: http://localhost:4000
   description: Local development
 tags:
+- name: Health
+  description: Service health and readiness
 - name: Widgets
   description: Widget management endpoints
 - name: Public Runtime
@@ -17,6 +19,26 @@ tags:
 - name: Analytics
   description: Widget analytics dashboard endpoints
 paths:
+  /health:
+    get:
+      tags:
+      - Health
+      summary: Health check
+      description: Returns service health, uptime, and database connectivity status. Excluded from rate limiting.
+      responses:
+        '200':
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                success: true
+                version: 1.0.0
+                environment: development
+                uptime: 12.345
+                timestamp: '2026-08-05T12:00:00.000Z'
+                database: connected
   /api/v1/widgets:
     get:
       tags:
@@ -2053,6 +2075,25 @@ components:
         timestamp:
           type: string
           format: date-time
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        version:
+          type: string
+        environment:
+          type: string
+        uptime:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+        database:
+          type: string
+          enum:
+          - connected
+          - not_connected
   responses:
     ValidationError:
       description: Validation failed

@@ -9,8 +9,7 @@ const runtimeRepositoryMock = vi.hoisted(() => ({
 }));
 
 const submissionRepositoryMock = vi.hoisted(() => ({
-  createSubmission: vi.fn(),
-  findRecentDuplicate: vi.fn(),
+  createSubmissionIfNotDuplicate: vi.fn(),
   findSubmissions: vi.fn(),
   findSubmission: vi.fn(),
   deleteSubmission: vi.fn(),
@@ -84,8 +83,7 @@ describe('SubmissionService', () => {
         schemaJson: schema,
       },
     });
-    submissionRepositoryMock.findRecentDuplicate.mockResolvedValue(null);
-    submissionRepositoryMock.createSubmission.mockResolvedValue({
+    submissionRepositoryMock.createSubmissionIfNotDuplicate.mockResolvedValue({
       id: 'submission-1',
     });
 
@@ -102,12 +100,13 @@ describe('SubmissionService', () => {
     );
 
     expect(result.success).toBe(true);
-    expect(submissionRepositoryMock.createSubmission).toHaveBeenCalledWith(
+    expect(submissionRepositoryMock.createSubmissionIfNotDuplicate).toHaveBeenCalledWith(
       expect.objectContaining({
         widgetId: 'widget-1',
         widgetVersionId: 'version-2',
         ipHash: expect.stringMatching(/^[a-f0-9]{64}$/) as string,
       }),
+      expect.any(Date),
     );
   });
 
@@ -159,7 +158,7 @@ describe('SubmissionService', () => {
         schemaJson: schema,
       },
     });
-    submissionRepositoryMock.findRecentDuplicate.mockResolvedValue({ id: 'submission-old' });
+    submissionRepositoryMock.createSubmissionIfNotDuplicate.mockResolvedValue('duplicate');
 
     await expect(
       service.submitPublic(

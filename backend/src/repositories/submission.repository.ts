@@ -10,49 +10,50 @@ import { hashPayload } from '../utils/ip-hash.js';
 import { paginationSkip } from '../utils/pagination.js';
 
 export class SubmissionRepository {
-  async createSubmission(input: CreateSubmissionInput): Promise<Submission> {
-    return prisma.submission.create({
-      data: {
-        workspaceId: input.workspaceId,
-        widgetId: input.widgetId,
-        widgetVersionId: input.widgetVersionId,
-        payload: input.payload as Prisma.InputJsonValue,
-        country: input.country,
-        browser: input.browser,
-        device: input.device,
-        userAgent: input.userAgent,
-        referrer: input.referrer,
-        ipHash: input.ipHash,
-      },
-    });
-  }
-
-  async findRecentDuplicate(input: {
-    widgetId: string;
-    ipHash: string;
-    payload: Record<string, unknown>;
-    since: Date;
-  }): Promise<Submission | null> {
+  async createSubmissionIfNotDuplicate(
+    input: CreateSubmissionInput,
+    since: Date,
+  ): Promise<'duplicate' | Submission> {
     const payloadHash = hashPayload(input.payload);
-    const recent = await prisma.submission.findMany({
-      where: {
-        widgetId: input.widgetId,
-        ipHash: input.ipHash,
-        deletedAt: null,
-        createdAt: { gte: input.since },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    });
 
-    return (
-      recent.find((submission) => {
+    return prisma.$transaction(async (tx) => {
+      const recent = await tx.submission.findMany({
+        where: {
+          widgetId: input.widgetId,
+          ipHash: input.ipHash,
+          deletedAt: null,
+          createdAt: { gte: since },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      });
+
+      const duplicate = recent.find((submission) => {
         if (!isRecord(submission.payload)) {
           return false;
         }
         return hashPayload(submission.payload) === payloadHash;
-      }) ?? null
-    );
+      });
+
+      if (duplicate) {
+        return 'duplicate';
+      }
+
+      return tx.submission.create({
+        data: {
+          workspaceId: input.workspaceId,
+          widgetId: input.widgetId,
+          widgetVersionId: input.widgetVersionId,
+          payload: input.payload as Prisma.InputJsonValue,
+          country: input.country,
+          browser: input.browser,
+          device: input.device,
+          userAgent: input.userAgent,
+          referrer: input.referrer,
+          ipHash: input.ipHash,
+        },
+      });
+    });
   }
 
   async findSubmissions(

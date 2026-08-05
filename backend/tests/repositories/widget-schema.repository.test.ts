@@ -10,6 +10,7 @@ const prismaMock = vi.hoisted(() => ({
   widgetVersion: {
     update: vi.fn(),
   },
+  $transaction: vi.fn(),
 }));
 
 vi.mock('../../src/database/prisma.js', () => ({
@@ -40,7 +41,7 @@ describe('WidgetSchemaRepository', () => {
 
     prismaMock.widget.findFirst.mockResolvedValue({ ...widget, currentVersion: version });
 
-    const result = await repository.getCurrentVersion('widget-1');
+    const result = await repository.getCurrentVersion('widget-1', 'workspace-1');
 
     expect(result?.version.id).toBe('version-1');
     expect(result?.widget.id).toBe('widget-1');
@@ -59,7 +60,7 @@ describe('WidgetSchemaRepository', () => {
       },
     });
 
-    const result = await repository.getSchema('widget-1');
+    const result = await repository.getSchema('widget-1', 'workspace-1');
 
     expect(result).toMatchObject({
       widgetId: 'widget-1',
@@ -69,17 +70,15 @@ describe('WidgetSchemaRepository', () => {
     });
   });
 
-  it('updateCurrentVersion updates schemaJson', async () => {
-    const updatedVersion = {
-      id: 'version-1',
-      schemaJson: { version: 1, fields: [{ id: 'field-1', type: 'text', label: 'Name' }] },
-    };
+  it('updateSchemaAndTouchWidget updates schema and widget timestamp atomically', async () => {
+    const schemaJson = { version: 1, fields: [{ id: 'field-1', type: 'text', label: 'Name' }] };
+    const updatedAt = new Date('2026-01-03T00:00:00.000Z');
 
-    prismaMock.widgetVersion.update.mockResolvedValue(updatedVersion);
+    prismaMock.$transaction.mockResolvedValue([{ id: 'version-1' }, { updatedAt }]);
 
-    const result = await repository.updateCurrentVersion('version-1', updatedVersion.schemaJson);
+    const result = await repository.updateSchemaAndTouchWidget('version-1', 'widget-1', schemaJson);
 
-    expect(result.schemaJson).toEqual(updatedVersion.schemaJson);
-    expect(prismaMock.widgetVersion.update).toHaveBeenCalledOnce();
+    expect(result).toEqual(updatedAt);
+    expect(prismaMock.$transaction).toHaveBeenCalledOnce();
   });
 });

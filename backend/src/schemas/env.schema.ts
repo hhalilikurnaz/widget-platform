@@ -7,6 +7,7 @@ export const envSchema = z.object({
   SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL'),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
   CORS_ORIGIN: z.string().url('CORS_ORIGIN must be a valid URL').optional(),
+  IP_HASH_SECRET: z.string().min(16, 'IP_HASH_SECRET must be at least 16 characters').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

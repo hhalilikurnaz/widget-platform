@@ -13,7 +13,6 @@ const analyticsRepositoryMock = vi.hoisted(() => ({
   getSources: vi.fn(),
   getPerformance: vi.fn(),
   resolveWidgetVersionId: vi.fn(),
-  isSupportedEventType: vi.fn(),
 }));
 
 const runtimeRepositoryMock = vi.hoisted(() => ({
@@ -52,7 +51,6 @@ describe('AnalyticsService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    analyticsRepositoryMock.isSupportedEventType.mockReturnValue(true);
     widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue({ id: 'widget-1' });
   });
 
@@ -100,11 +98,10 @@ describe('AnalyticsService', () => {
       widget: { id: 'widget-1', workspaceId: 'workspace-1' },
       publishedVersion: { id: 'version-2' },
     });
-    analyticsRepositoryMock.isSupportedEventType.mockReturnValue(false);
 
     await expect(
       service.ingestPublicEvent(embedToken, {
-        eventType: 'VIEW',
+        eventType: 'INVALID' as 'VIEW',
         sessionId: 'sess-1',
       }),
     ).rejects.toBeInstanceOf(ValidationError);

@@ -1,6 +1,6 @@
 # Widget Platform — Backend
 
-Phase 1 backend foundation for Widget Platform. This is an independent Express REST API, separate from the Next.js frontend.
+Production-ready Express REST API for Widget Platform (Phases 1–10). This is an independent backend service, separate from the Next.js frontend.
 
 ## Architecture
 
@@ -924,6 +924,45 @@ curl http://localhost:4000/api/v1/widgets \
 | `requireRole(minRole)` | Enforce minimum membership role |
 | `requireOwnership()` | Verify widget belongs to current workspace |
 
+## Production Hardening (Phase 10)
+
+Phase 10 finalizes the backend for production deployment without adding new product features.
+
+### Security Hardening
+
+| Control | Implementation |
+| ------- | -------------- |
+| Helmet | Security headers on all responses |
+| CORS | Dashboard API restricted to `CORS_ORIGIN`; public embed routes accept any origin |
+| Rate limiting | Global (100/min), public (200/min), submissions (10/min), analytics (100/min); `/health` excluded |
+| IP hashing | SHA-256 with optional `IP_HASH_SECRET` pepper |
+| Error responses | Generic 404/500 messages; no route enumeration |
+| Auth logging | User IDs logged; emails excluded from logs |
+
+### Performance Optimizations
+
+- **Widget ownership cache:** `requireOwnership()` loads widget once; services reuse `req.widget` via `ensureWidgetInWorkspace()`
+- **Runtime lookup:** Single query with published version included
+- **Schema updates:** Atomic transaction for schema write + widget touch
+- **Duplicate submissions:** Check-and-insert wrapped in database transaction
+- **Database indexes:** Composite index on `(widgetId, ipHash, createdAt)`, GIN index on analytics metadata, workspace soft-delete index
+
+### Production Deployment Notes
+
+| Concern | Recommendation |
+| ------- | -------------- |
+| Rate limiting | Use Redis-backed store for multi-instance deployments (express-rate-limit store) |
+| Database | Run `npx prisma migrate deploy` before starting |
+| Secrets | Set `IP_HASH_SECRET` (min 16 chars) in production |
+| Health checks | `GET /health` — excluded from rate limiting |
+| CORS | Set `CORS_ORIGIN` to your dashboard frontend URL |
+
+### Quality Gates
+
+```bash
+npm run lint && npm run typecheck && npm test && npm run build
+```
+
 ## Environment Variables
 
 | Variable                    | Required | Description                                  |
@@ -933,6 +972,7 @@ curl http://localhost:4000/api/v1/widgets \
 | `DATABASE_URL`              | Yes      | PostgreSQL connection string (Supabase)      |
 | `SUPABASE_URL`              | Yes      | Supabase project URL                         |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes      | Supabase service role key (server-side only) |
+| `IP_HASH_SECRET`            | No       | Secret pepper for IP hashing (min 16 chars; required in production) |
 
 Environment variables are validated on startup using Zod. Missing or invalid values prevent the server from starting.
 
@@ -1029,7 +1069,7 @@ Structured JSON logging via Pino:
 - Errors with request context
 - Unhandled exceptions and promise rejections
 
-Sensitive data (passwords, tokens, PII) is never logged.
+Sensitive data (passwords, tokens, raw IP addresses, PII) is never logged.
 
 ## Error System
 
@@ -1045,18 +1085,18 @@ Sensitive data (passwords, tokens, PII) is never logged.
 
 ## Future Phases
 
-### Phase 10 — Billing & Subscriptions
+### Phase 11 — Billing & Subscriptions
 
 - Stripe integration
 - Plan limits and usage metering
 - Subscription lifecycle webhooks
 
-### Phase 11 — AI Assistant
+### Phase 12 — AI Assistant
 
 - Widget generation and schema suggestions
 - Conversational builder API
 
-### Phase 12 — Marketplace & Realtime
+### Phase 13 — Marketplace & Realtime
 
 - Template marketplace APIs
 - Realtime collaboration (Supabase Realtime)

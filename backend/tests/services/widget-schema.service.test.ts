@@ -8,9 +8,7 @@ import { TEST_WORKSPACE_ID } from '../helpers/workspace-fixtures.js';
 const repositoryMock = vi.hoisted(() => ({
   getSchema: vi.fn(),
   getCurrentVersion: vi.fn(),
-  updateSchema: vi.fn(),
-  resetSchema: vi.fn(),
-  touchWidget: vi.fn(),
+  updateSchemaAndTouchWidget: vi.fn(),
 }));
 
 const widgetRepositoryMock = vi.hoisted(() => ({
@@ -73,8 +71,7 @@ describe('WidgetSchemaService', () => {
       widget: { id: 'widget-1', name: 'Contact Us' },
       version: { id: 'version-1', version: 1, published: false },
     });
-    repositoryMock.updateSchema.mockResolvedValue(undefined);
-    repositoryMock.touchWidget.mockResolvedValue(new Date('2026-01-02T00:00:00.000Z'));
+    repositoryMock.updateSchemaAndTouchWidget.mockResolvedValue(new Date('2026-01-02T00:00:00.000Z'));
 
     const result = await service.updateSchema(
       'widget-1',
@@ -83,7 +80,7 @@ describe('WidgetSchemaService', () => {
     );
 
     expect(result.versionId).toBe('version-1');
-    expect(repositoryMock.updateSchema).toHaveBeenCalledOnce();
+    expect(repositoryMock.updateSchemaAndTouchWidget).toHaveBeenCalledOnce();
   });
 
   it('rejects updates to published schema versions', async () => {
@@ -119,19 +116,18 @@ describe('WidgetSchemaService', () => {
       widget: { id: 'widget-1', name: 'Contact Us' },
       version: { id: 'version-1', version: 1, published: false },
     });
-    repositoryMock.resetSchema.mockResolvedValue(undefined);
-    repositoryMock.touchWidget.mockResolvedValue(new Date('2026-01-03T00:00:00.000Z'));
+    repositoryMock.updateSchemaAndTouchWidget.mockResolvedValue(new Date('2026-01-03T00:00:00.000Z'));
 
     const result = await service.resetSchema('widget-1', TEST_WORKSPACE_ID);
 
     expect(result.schema.metadata).toEqual({ name: 'Contact Us' });
-    expect(repositoryMock.resetSchema).toHaveBeenCalledOnce();
+    expect(repositoryMock.updateSchemaAndTouchWidget).toHaveBeenCalledOnce();
   });
 
   it('validates schema without persisting changes', () => {
     const result = service.validateSchema(validSchema as Record<string, unknown>);
 
     expect(result.valid).toBe(true);
-    expect(repositoryMock.updateSchema).not.toHaveBeenCalled();
+    expect(repositoryMock.updateSchemaAndTouchWidget).not.toHaveBeenCalled();
   });
 });

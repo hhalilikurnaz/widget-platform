@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma, Widget } from '@prisma/client';
 
 import { NotFoundError, UnprocessableEntityError } from '../errors/index.js';
 import { logger } from '../logger/index.js';
@@ -11,7 +11,7 @@ import type {
 import { createDefaultSchema } from '../utils/schema-default.js';
 import { validateWidgetSchema } from '../utils/schema-validator.js';
 import { normalizeSchemaDocument } from '../utils/schema-version.js';
-import { requireWidgetInWorkspace } from '../utils/workspace-access.js';
+import { ensureWidgetInWorkspace } from '../utils/workspace-access.js';
 
 export class WidgetSchemaService {
   async getSchema(widgetId: string, workspaceId: string): Promise<WidgetSchemaDto> {
@@ -34,16 +34,17 @@ export class WidgetSchemaService {
     widgetId: string,
     workspaceId: string,
     schema: Record<string, unknown>,
+    preloaded?: Widget,
   ): Promise<WidgetSchemaDto> {
-    const editable = await this.getEditableVersion(widgetId, workspaceId);
+    const editable = await this.getEditableVersion(widgetId, workspaceId, preloaded);
     this.ensureSchemaIsValid(schema);
 
     const normalized = normalizeSchemaDocument(schema);
-    await widgetSchemaRepository.updateSchema(
+    const updatedAt = await widgetSchemaRepository.updateSchemaAndTouchWidget(
       editable.version.id,
+      widgetId,
       normalized as unknown as Prisma.InputJsonValue,
     );
-    const updatedAt = await widgetSchemaRepository.touchWidget(widgetId);
 
     logger.info(
       { widgetId, versionId: editable.version.id, version: editable.version.version },
@@ -60,12 +61,19 @@ export class WidgetSchemaService {
     };
   }
 
-  async resetSchema(widgetId: string, workspaceId: string): Promise<WidgetSchemaDto> {
-    const editable = await this.getEditableVersion(widgetId, workspaceId);
+  async resetSchema(
+    widgetId: string,
+    workspaceId: string,
+    preloaded?: Widget,
+  ): Promise<WidgetSchemaDto> {
+    const editable = await this.getEditableVersion(widgetId, workspaceId, preloaded);
     const defaultSchema = createDefaultSchema(editable.widget.name);
 
-    await widgetSchemaRepository.resetSchema(editable.version.id, defaultSchema);
-    const updatedAt = await widgetSchemaRepository.touchWidget(widgetId);
+    const updatedAt = await widgetSchemaRepository.updateSchemaAndTouchWidget(
+      editable.version.id,
+      widgetId,
+      defaultSchema,
+    );
 
     logger.info(
       { widgetId, versionId: editable.version.id, version: editable.version.version },
@@ -93,8 +101,8 @@ export class WidgetSchemaService {
     return result;
   }
 
-  private async getEditableVersion(widgetId: string, workspaceId: string) {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+  private async getEditableVersion(widgetId: string, workspaceId: string, preloaded?: Widget) {
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
     const record = await widgetSchemaRepository.getCurrentVersion(widgetId, workspaceId);
     if (!record) {
       throw new NotFoundError('Widget not found');

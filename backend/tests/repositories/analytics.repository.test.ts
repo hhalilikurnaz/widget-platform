@@ -79,9 +79,11 @@ describe('AnalyticsRepository', () => {
     expect(versionId).toBe('version-2');
   });
 
-  it('isSupportedEventType validates event types', () => {
-    expect(repository.isSupportedEventType('VIEW')).toBe(true);
-    expect(repository.isSupportedEventType('FIELD_FOCUS')).toBe(true);
-    expect(repository.isSupportedEventType('INVALID')).toBe(false);
+  it('isSupportedAnalyticsEventType validates event types', async () => {
+    const { isSupportedAnalyticsEventType } = await import('../../src/utils/analytics-event-types.js');
+
+    expect(isSupportedAnalyticsEventType('VIEW')).toBe(true);
+    expect(isSupportedAnalyticsEventType('FIELD_FOCUS')).toBe(true);
+    expect(isSupportedAnalyticsEventType('INVALID')).toBe(false);
   });
 });

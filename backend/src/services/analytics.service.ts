@@ -1,3 +1,5 @@
+import type { Widget } from '@prisma/client';
+
 import { NotFoundError, ValidationError } from '../errors/index.js';
 import { logger } from '../logger/index.js';
 import { analyticsRepository } from '../repositories/analytics.repository.js';
@@ -29,7 +31,8 @@ import {
   buildAnalyticsTimelineFilters,
 } from '../utils/analytics-filter.js';
 import { buildStoredEventMetadata, extractEventTimestamp } from '../utils/analytics-mapper.js';
-import { requireWidgetInWorkspace } from '../utils/workspace-access.js';
+import { isSupportedAnalyticsEventType } from '../utils/analytics-event-types.js';
+import { ensureWidgetInWorkspace } from '../utils/workspace-access.js';
 
 const NOT_FOUND_MESSAGE = 'Widget not found';
 
@@ -42,7 +45,7 @@ export class AnalyticsService {
       throw new NotFoundError(NOT_FOUND_MESSAGE);
     }
 
-    if (!analyticsRepository.isSupportedEventType(body.eventType)) {
+    if (!isSupportedAnalyticsEventType(body.eventType)) {
       logger.info({ embedToken, eventType: body.eventType }, 'Analytics event rejected');
       throw new ValidationError('Unsupported analytics event type');
     }
@@ -74,8 +77,9 @@ export class AnalyticsService {
     workspaceId: string,
     widgetId: string,
     query: AnalyticsQuery,
+    preloaded?: Widget,
   ): Promise<AnalyticsOverviewDto> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
     const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const counts = await analyticsRepository.getOverview(filters, widgetVersionId);
@@ -89,8 +93,9 @@ export class AnalyticsService {
     workspaceId: string,
     widgetId: string,
     query: AnalyticsTimelineQuery,
+    preloaded?: Widget,
   ): Promise<AnalyticsTimelineDto> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
     const filters = buildAnalyticsTimelineFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const rows = await analyticsRepository.getTimeline(filters, widgetVersionId);
@@ -104,8 +109,9 @@ export class AnalyticsService {
     workspaceId: string,
     widgetId: string,
     query: AnalyticsQuery,
+    preloaded?: Widget,
   ): Promise<AnalyticsDevicesResponseDto> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
     const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const [deviceRows, browserRows] = await Promise.all([
@@ -123,8 +129,9 @@ export class AnalyticsService {
     workspaceId: string,
     widgetId: string,
     query: AnalyticsQuery,
+    preloaded?: Widget,
   ): Promise<AnalyticsCountryBreakdownDto> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
     const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const rows = await analyticsRepository.getCountries(filters, widgetVersionId);
@@ -136,8 +143,9 @@ export class AnalyticsService {
     workspaceId: string,
     widgetId: string,
     query: AnalyticsQuery,
+    preloaded?: Widget,
   ): Promise<AnalyticsSourceBreakdownDto> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
     const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const rows = await analyticsRepository.getSources(filters, widgetVersionId);
@@ -149,8 +157,9 @@ export class AnalyticsService {
     workspaceId: string,
     widgetId: string,
     query: AnalyticsQuery,
+    preloaded?: Widget,
   ): Promise<AnalyticsPerformanceDto> {
-    await requireWidgetInWorkspace(widgetId, workspaceId);
+    await ensureWidgetInWorkspace(widgetId, workspaceId, preloaded);
     const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const row = await analyticsRepository.getPerformance(filters, widgetVersionId);
