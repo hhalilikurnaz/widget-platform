@@ -82,6 +82,7 @@ describe('SubmissionRepository', () => {
     prismaMock.$transaction.mockResolvedValue([[submission], 1]);
 
     const result = await repository.findSubmissions({
+      workspaceId: 'workspace-1',
       widgetId: 'widget-1',
       page: 1,
       limit: 25,
@@ -97,12 +98,13 @@ describe('SubmissionRepository', () => {
   it('deleteSubmission soft deletes by setting deletedAt', async () => {
     prismaMock.submission.updateMany.mockResolvedValue({ count: 1 });
 
-    await repository.deleteSubmission('widget-1', 'submission-1');
+    await repository.deleteSubmission('workspace-1', 'widget-1', 'submission-1');
 
     expect(prismaMock.submission.updateMany).toHaveBeenCalledWith({
       where: {
         id: 'submission-1',
         widgetId: 'widget-1',
+        workspaceId: 'workspace-1',
         deletedAt: null,
       },
       data: {

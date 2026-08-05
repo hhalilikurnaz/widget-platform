@@ -2,19 +2,20 @@ import type { NextFunction, Request, Response } from 'express';
 
 import type {
   CreateWidgetBody,
-  DuplicateWidgetBody,
   ListWidgetsQuery,
   UpdateWidgetBody,
   WidgetIdParams,
 } from '../schemas/widget.schema.js';
 import { widgetService } from '../services/widget.service.js';
+import { getWorkspaceScope } from '../utils/request-auth.js';
 import { sendSuccess } from '../utils/response.js';
 
 export class WidgetController {
   listWidgets = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const query = req.validatedQuery as ListWidgetsQuery;
-      const result = await widgetService.listWidgets(query);
+      const { workspaceId } = getWorkspaceScope(req);
+      const result = await widgetService.listWidgets(workspaceId, query);
 
       sendSuccess(res, result.items, { meta: result.meta });
     } catch (error) {
@@ -25,7 +26,8 @@ export class WidgetController {
   getWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const widget = await widgetService.getWidget(id);
+      const { workspaceId } = getWorkspaceScope(req);
+      const widget = await widgetService.getWidget(workspaceId, id);
       sendSuccess(res, widget);
     } catch (error) {
       next(error);
@@ -35,7 +37,8 @@ export class WidgetController {
   createWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const body = req.body as CreateWidgetBody;
-      const widget = await widgetService.createWidget(body);
+      const { workspaceId, userId } = getWorkspaceScope(req);
+      const widget = await widgetService.createWidget(workspaceId, userId, body);
       sendSuccess(res, widget, { statusCode: 201, message: 'Widget created' });
     } catch (error) {
       next(error);
@@ -46,7 +49,8 @@ export class WidgetController {
     try {
       const { id } = req.params as WidgetIdParams;
       const body = req.body as UpdateWidgetBody;
-      const widget = await widgetService.updateWidget(id, body);
+      const { workspaceId } = getWorkspaceScope(req);
+      const widget = await widgetService.updateWidget(workspaceId, id, body);
       sendSuccess(res, widget, { message: 'Widget updated' });
     } catch (error) {
       next(error);
@@ -56,7 +60,8 @@ export class WidgetController {
   archiveWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const widget = await widgetService.archiveWidget(id);
+      const { workspaceId } = getWorkspaceScope(req);
+      const widget = await widgetService.archiveWidget(workspaceId, id);
       sendSuccess(res, widget, { message: 'Widget archived' });
     } catch (error) {
       next(error);
@@ -66,7 +71,8 @@ export class WidgetController {
   restoreWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const widget = await widgetService.restoreWidget(id);
+      const { workspaceId } = getWorkspaceScope(req);
+      const widget = await widgetService.restoreWidget(workspaceId, id);
       sendSuccess(res, widget, { message: 'Widget restored' });
     } catch (error) {
       next(error);
@@ -76,8 +82,8 @@ export class WidgetController {
   duplicateWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      const body = req.body as DuplicateWidgetBody;
-      const widget = await widgetService.duplicateWidget(id, body.createdBy);
+      const { workspaceId, userId } = getWorkspaceScope(req);
+      const widget = await widgetService.duplicateWidget(workspaceId, id, userId);
       sendSuccess(res, widget, { statusCode: 201, message: 'Widget duplicated' });
     } catch (error) {
       next(error);
@@ -87,7 +93,8 @@ export class WidgetController {
   deleteWidget = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params as WidgetIdParams;
-      await widgetService.deleteWidget(id);
+      const { workspaceId } = getWorkspaceScope(req);
+      await widgetService.deleteWidget(workspaceId, id);
       res.status(204).send();
     } catch (error) {
       next(error);

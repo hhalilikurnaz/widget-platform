@@ -53,6 +53,7 @@ export interface CreateAnalyticsEventInput {
 }
 
 export interface AnalyticsFilters {
+  workspaceId: string;
   widgetId: string;
   dateFrom: Date;
   dateTo: Date;

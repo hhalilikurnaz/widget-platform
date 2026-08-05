@@ -51,6 +51,7 @@ export interface CreateSubmissionInput {
 }
 
 export interface SubmissionListFilters {
+  workspaceId: string;
   widgetId: string;
   page: number;
   limit: number;
@@ -66,6 +67,7 @@ export interface SubmissionListFilters {
 }
 
 export interface SubmissionExportFilters {
+  workspaceId: string;
   widgetId: string;
   dateFrom?: Date;
   dateTo?: Date;

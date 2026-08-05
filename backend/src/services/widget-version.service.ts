@@ -12,11 +12,21 @@ import type {
 import { generateEmbedToken } from '../utils/embed-token.js';
 import { validateForPublish } from '../utils/publish-validator.js';
 import { rethrowPrismaConflict } from '../utils/prisma-error.js';
-import { cloneSchemaJson, toPublishResultDto, toUnpublishResultDto, toVersionDetailDto, toVersionSummaryDto } from '../utils/version-mapper.js';
+import {
+  cloneSchemaJson,
+  toPublishResultDto,
+  toUnpublishResultDto,
+  toVersionDetailDto,
+  toVersionSummaryDto,
+} from '../utils/version-mapper.js';
+import { requireWidgetInWorkspace } from '../utils/workspace-access.js';
 
 export class WidgetVersionService {
-  async publishWidget(widgetId: string): Promise<PublishWidgetResultDto> {
-    const widgetRecord = await widgetVersionRepository.findWidgetWithCurrentVersion(widgetId);
+  async publishWidget(widgetId: string, workspaceId: string): Promise<PublishWidgetResultDto> {
+    const widgetRecord = await widgetVersionRepository.findWidgetWithCurrentVersion(
+      widgetId,
+      workspaceId,
+    );
     if (!widgetRecord) {
       throw new NotFoundError('Widget not found');
     }
@@ -74,8 +84,11 @@ export class WidgetVersionService {
     });
   }
 
-  async unpublishWidget(widgetId: string): Promise<UnpublishWidgetResultDto> {
-    const widgetRecord = await widgetVersionRepository.findWidgetWithCurrentVersion(widgetId);
+  async unpublishWidget(widgetId: string, workspaceId: string): Promise<UnpublishWidgetResultDto> {
+    const widgetRecord = await widgetVersionRepository.findWidgetWithCurrentVersion(
+      widgetId,
+      workspaceId,
+    );
     if (!widgetRecord) {
       throw new NotFoundError('Widget not found');
     }
@@ -91,23 +104,19 @@ export class WidgetVersionService {
     return toUnpublishResultDto(widgetId);
   }
 
-  async listVersions(widgetId: string): Promise<WidgetVersionSummaryDto[]> {
-    const widget = await widgetRepository.findById(widgetId);
-    if (!widget) {
-      throw new NotFoundError('Widget not found');
-    }
-
+  async listVersions(widgetId: string, workspaceId: string): Promise<WidgetVersionSummaryDto[]> {
+    const widget = await requireWidgetInWorkspace(widgetId, workspaceId);
     const versions = await widgetVersionRepository.getVersions(widgetId);
 
     return versions.map((version) => toVersionSummaryDto(version, widget.createdBy));
   }
 
-  async getVersion(widgetId: string, versionId: string): Promise<WidgetVersionDetailDto> {
-    const widget = await widgetRepository.findById(widgetId);
-    if (!widget) {
-      throw new NotFoundError('Widget not found');
-    }
-
+  async getVersion(
+    widgetId: string,
+    workspaceId: string,
+    versionId: string,
+  ): Promise<WidgetVersionDetailDto> {
+    const widget = await requireWidgetInWorkspace(widgetId, workspaceId);
     const version = await widgetVersionRepository.getVersion(widgetId, versionId);
     if (!version) {
       throw new NotFoundError('Widget version not found');
@@ -116,11 +125,12 @@ export class WidgetVersionService {
     return toVersionDetailDto(version, widgetId, widget.createdBy);
   }
 
-  async restoreVersion(widgetId: string, versionId: string): Promise<RestoreVersionResultDto> {
-    const widget = await widgetRepository.findById(widgetId);
-    if (!widget) {
-      throw new NotFoundError('Widget not found');
-    }
+  async restoreVersion(
+    widgetId: string,
+    workspaceId: string,
+    versionId: string,
+  ): Promise<RestoreVersionResultDto> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
 
     const sourceVersion = await widgetVersionRepository.getVersion(widgetId, versionId);
     if (!sourceVersion) {

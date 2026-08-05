@@ -1,3 +1,4 @@
+import './helpers/auth-mocks.js';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -23,16 +24,19 @@ vi.mock('../src/services/widget.service.js', () => ({
 
 const app = createApp();
 
+const TEST_WORKSPACE_ID = '22222222-2222-2222-2222-222222222222';
+const TEST_USER_ID = '33333333-3333-3333-3333-333333333333';
+
 const sampleWidget: WidgetDto = {
   id: '11111111-1111-1111-1111-111111111111',
-  workspaceId: '22222222-2222-2222-2222-222222222222',
+  workspaceId: TEST_WORKSPACE_ID,
   name: 'Contact Us',
   slug: 'contact-us',
   status: 'DRAFT',
   description: 'Primary contact form',
   embedToken: 'wt_demo1234567890abcdef',
   themeId: null,
-  createdBy: '33333333-3333-3333-3333-333333333333',
+  createdBy: TEST_USER_ID,
   currentVersionId: '44444444-4444-4444-4444-444444444444',
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -53,7 +57,9 @@ describe('Widget API', () => {
 
     const response = await request(app)
       .get('/api/v1/widgets')
-      .query({ workspaceId: sampleWidget.workspaceId })
+      .set('Authorization', 'Bearer test-token')
+      .set('X-Workspace-Id', TEST_WORKSPACE_ID)
+      .query({ page: 1, limit: 25 })
       .expect(200);
 
     const body = response.body as ApiSuccessResponse<WidgetDto[]> & {
@@ -68,7 +74,9 @@ describe('Widget API', () => {
   it('POST /api/v1/widgets validates request body', async () => {
     const response = await request(app)
       .post('/api/v1/widgets')
-      .send({ workspaceId: sampleWidget.workspaceId })
+      .set('Authorization', 'Bearer test-token')
+      .set('X-Workspace-Id', TEST_WORKSPACE_ID)
+      .send({})
       .expect(400);
 
     const body = response.body as ApiErrorResponse;
@@ -80,10 +88,10 @@ describe('Widget API', () => {
 
     const response = await request(app)
       .post('/api/v1/widgets')
+      .set('Authorization', 'Bearer test-token')
+      .set('X-Workspace-Id', TEST_WORKSPACE_ID)
       .send({
-        workspaceId: sampleWidget.workspaceId,
         name: 'Contact Us',
-        createdBy: sampleWidget.createdBy,
       })
       .expect(201);
 
@@ -145,7 +153,9 @@ describe('Widget API', () => {
 
     const response = await request(app)
       .post(`/api/v1/widgets/${sampleWidget.id}/duplicate`)
-      .send({ createdBy: sampleWidget.createdBy })
+      .set('Authorization', 'Bearer test-token')
+      .set('X-Workspace-Id', TEST_WORKSPACE_ID)
+      .send({})
       .expect(201);
 
     const body = response.body as ApiSuccessResponse<WidgetDto>;

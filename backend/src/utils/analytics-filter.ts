@@ -26,6 +26,7 @@ export function resolveAnalyticsDateRange(dateFrom?: Date, dateTo?: Date): { dat
 }
 
 export function buildAnalyticsFilters(
+  workspaceId: string,
   widgetId: string,
   query: {
     dateFrom?: Date;
@@ -41,6 +42,7 @@ export function buildAnalyticsFilters(
   const range = resolveAnalyticsDateRange(query.dateFrom, query.dateTo);
 
   return {
+    workspaceId,
     widgetId,
     dateFrom: range.dateFrom,
     dateTo: range.dateTo,
@@ -53,6 +55,7 @@ export function buildAnalyticsFilters(
 }
 
 export function buildAnalyticsTimelineFilters(
+  workspaceId: string,
   widgetId: string,
   query: {
     dateFrom?: Date;
@@ -66,7 +69,7 @@ export function buildAnalyticsTimelineFilters(
   },
 ): AnalyticsTimelineFilters {
   return {
-    ...buildAnalyticsFilters(widgetId, query),
+    ...buildAnalyticsFilters(workspaceId, widgetId, query),
     granularity: query.granularity,
   };
 }

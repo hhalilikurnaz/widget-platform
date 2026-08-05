@@ -7,15 +7,18 @@ import type {
   SubmitSubmissionBody,
   SubmitSubmissionParams,
 } from '../schemas/submission.schema.js';
+import type { WidgetIdParams } from '../schemas/widget.schema.js';
 import { submissionService } from '../services/submission.service.js';
+import { getWorkspaceScope } from '../utils/request-auth.js';
 import { sendSuccess } from '../utils/response.js';
 
 export class SubmissionController {
   listSubmissions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { id } = req.params as SubmissionParams;
+      const { id } = req.params as WidgetIdParams;
       const query = req.validatedQuery as ListSubmissionsQuery;
-      const result = await submissionService.listSubmissions(id, query);
+      const { workspaceId } = getWorkspaceScope(req);
+      const result = await submissionService.listSubmissions(workspaceId, id, query);
 
       sendSuccess(res, result.items, { meta: result.meta });
     } catch (error) {
@@ -26,7 +29,8 @@ export class SubmissionController {
   getSubmission = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id, submissionId } = req.params as SubmissionParams;
-      const submission = await submissionService.getSubmission(id, submissionId);
+      const { workspaceId } = getWorkspaceScope(req);
+      const submission = await submissionService.getSubmission(workspaceId, id, submissionId);
 
       sendSuccess(res, submission);
     } catch (error) {
@@ -37,7 +41,8 @@ export class SubmissionController {
   deleteSubmission = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id, submissionId } = req.params as SubmissionParams;
-      await submissionService.deleteSubmission(id, submissionId);
+      const { workspaceId } = getWorkspaceScope(req);
+      await submissionService.deleteSubmission(workspaceId, id, submissionId);
 
       res.status(204).send();
     } catch (error) {
@@ -47,9 +52,10 @@ export class SubmissionController {
 
   exportSubmissions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { id } = req.params as SubmissionParams;
+      const { id } = req.params as WidgetIdParams;
       const body = req.body as ExportSubmissionsBody;
-      const csv = await submissionService.exportSubmissions(id, body);
+      const { workspaceId } = getWorkspaceScope(req);
+      const csv = await submissionService.exportSubmissions(workspaceId, id, body);
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename="submissions.csv"');

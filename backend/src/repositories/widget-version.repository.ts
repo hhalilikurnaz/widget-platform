@@ -19,10 +19,14 @@ export interface RestoreResult {
 }
 
 export class WidgetVersionRepository {
-  async findWidgetWithCurrentVersion(widgetId: string): Promise<WidgetWithCurrentVersion | null> {
+  async findWidgetWithCurrentVersion(
+    widgetId: string,
+    workspaceId: string,
+  ): Promise<WidgetWithCurrentVersion | null> {
     return prisma.widget.findFirst({
       where: {
         id: widgetId,
+        workspaceId,
         deletedAt: null,
       },
       include: {

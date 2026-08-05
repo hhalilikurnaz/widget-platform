@@ -3,7 +3,7 @@ import { ConflictError, NotFoundError, ValidationError } from '../errors/index.j
 import { logger } from '../logger/index.js';
 import { runtimeRepository } from '../repositories/runtime.repository.js';
 import { submissionRepository } from '../repositories/submission.repository.js';
-import { widgetRepository } from '../repositories/widget.repository.js';
+import { requireWidgetInWorkspace } from '../utils/workspace-access.js';
 import type {
   ExportSubmissionsBody,
   ListSubmissionsQuery,
@@ -97,11 +97,16 @@ export class SubmissionService {
     return toPublicSubmitResult();
   }
 
-  async listSubmissions(widgetId: string, query: ListSubmissionsQuery): Promise<PaginatedSubmissions> {
-    await this.ensureWidgetExists(widgetId);
+  async listSubmissions(
+    workspaceId: string,
+    widgetId: string,
+    query: ListSubmissionsQuery,
+  ): Promise<PaginatedSubmissions> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
 
     const pagination = parsePagination(query.page, query.limit);
     const { items, total } = await submissionRepository.findSubmissions({
+      workspaceId,
       widgetId,
       page: pagination.page,
       limit: pagination.limit,
@@ -122,10 +127,14 @@ export class SubmissionService {
     };
   }
 
-  async getSubmission(widgetId: string, submissionId: string): Promise<SubmissionDetailDto> {
-    await this.ensureWidgetExists(widgetId);
+  async getSubmission(
+    workspaceId: string,
+    widgetId: string,
+    submissionId: string,
+  ): Promise<SubmissionDetailDto> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
 
-    const submission = await submissionRepository.findSubmission(widgetId, submissionId);
+    const submission = await submissionRepository.findSubmission(workspaceId, widgetId, submissionId);
     if (!submission) {
       throw new NotFoundError(SUBMISSION_NOT_FOUND_MESSAGE);
     }
@@ -133,21 +142,22 @@ export class SubmissionService {
     return toSubmissionDetail(submission, submission.widget.name);
   }
 
-  async deleteSubmission(widgetId: string, submissionId: string): Promise<void> {
-    await this.ensureWidgetExists(widgetId);
+  async deleteSubmission(workspaceId: string, widgetId: string, submissionId: string): Promise<void> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
 
-    const submission = await submissionRepository.findSubmission(widgetId, submissionId);
+    const submission = await submissionRepository.findSubmission(workspaceId, widgetId, submissionId);
     if (!submission) {
       throw new NotFoundError(SUBMISSION_NOT_FOUND_MESSAGE);
     }
 
-    await submissionRepository.deleteSubmission(widgetId, submissionId);
+    await submissionRepository.deleteSubmission(workspaceId, widgetId, submissionId);
   }
 
-  async exportSubmissions(widgetId: string, body: ExportSubmissionsBody): Promise<string> {
-    await this.ensureWidgetExists(widgetId);
+  async exportSubmissions(workspaceId: string, widgetId: string, body: ExportSubmissionsBody): Promise<string> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
 
     const rows = await submissionRepository.exportSubmissions({
+      workspaceId,
       widgetId,
       dateFrom: body.dateFrom,
       dateTo: body.dateTo,
@@ -160,13 +170,6 @@ export class SubmissionService {
     logger.info({ widgetId, count: rows.length }, 'Submission exported');
 
     return generateSubmissionsCsv(rows.map(toSubmissionExportRow));
-  }
-
-  private async ensureWidgetExists(widgetId: string): Promise<void> {
-    const widget = await widgetRepository.findById(widgetId);
-    if (!widget) {
-      throw new NotFoundError(NOT_FOUND_MESSAGE);
-    }
   }
 }
 

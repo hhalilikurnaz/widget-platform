@@ -52,6 +52,7 @@ export class AnalyticsRepository {
         SELECT *
         FROM analytics_events
         WHERE widget_id = ${filters.widgetId}::uuid
+          AND workspace_id = ${filters.workspaceId}::uuid
           AND created_at >= ${filters.dateFrom}
           AND created_at <= ${filters.dateTo}
           AND (${params.country}::text IS NULL OR metadata->>'country' = ${params.country})
@@ -156,6 +157,7 @@ export class AnalyticsRepository {
         COUNT(*) FILTER (WHERE type = 'ERROR'::"AnalyticsEventType") AS errors
       FROM analytics_events
       WHERE widget_id = ${filters.widgetId}::uuid
+        AND workspace_id = ${filters.workspaceId}::uuid
         AND created_at >= ${filters.dateFrom}
         AND created_at <= ${filters.dateTo}
         AND (${params.country}::text IS NULL OR metadata->>'country' = ${params.country})
@@ -198,6 +200,7 @@ export class AnalyticsRepository {
       SELECT metadata->>'device' AS device, COUNT(*)::int AS count
       FROM analytics_events
       WHERE widget_id = ${filters.widgetId}::uuid
+        AND workspace_id = ${filters.workspaceId}::uuid
         AND created_at >= ${filters.dateFrom}
         AND created_at <= ${filters.dateTo}
         AND type = 'VIEW'::"AnalyticsEventType"
@@ -217,6 +220,7 @@ export class AnalyticsRepository {
       SELECT metadata->>'country' AS country, COUNT(*)::int AS count
       FROM analytics_events
       WHERE widget_id = ${filters.widgetId}::uuid
+        AND workspace_id = ${filters.workspaceId}::uuid
         AND created_at >= ${filters.dateFrom}
         AND created_at <= ${filters.dateTo}
         AND type = 'VIEW'::"AnalyticsEventType"
@@ -241,6 +245,7 @@ export class AnalyticsRepository {
         COUNT(*)::int AS count
       FROM analytics_events
       WHERE widget_id = ${filters.widgetId}::uuid
+        AND workspace_id = ${filters.workspaceId}::uuid
         AND created_at >= ${filters.dateFrom}
         AND created_at <= ${filters.dateTo}
         AND type = 'VIEW'::"AnalyticsEventType"
@@ -260,6 +265,7 @@ export class AnalyticsRepository {
       SELECT metadata->>'browser' AS browser, COUNT(*)::int AS count
       FROM analytics_events
       WHERE widget_id = ${filters.widgetId}::uuid
+        AND workspace_id = ${filters.workspaceId}::uuid
         AND created_at >= ${filters.dateFrom}
         AND created_at <= ${filters.dateTo}
         AND type = 'VIEW'::"AnalyticsEventType"
@@ -296,6 +302,7 @@ export class AnalyticsRepository {
           SELECT metadata->>'runtimeVersion'
           FROM analytics_events
           WHERE widget_id = ${filters.widgetId}::uuid
+          AND workspace_id = ${filters.workspaceId}::uuid
             AND created_at >= ${filters.dateFrom}
             AND created_at <= ${filters.dateTo}
             AND metadata->>'runtimeVersion' IS NOT NULL
@@ -304,6 +311,7 @@ export class AnalyticsRepository {
         ) AS runtime_version
       FROM analytics_events
       WHERE widget_id = ${filters.widgetId}::uuid
+        AND workspace_id = ${filters.workspaceId}::uuid
         AND created_at >= ${filters.dateFrom}
         AND created_at <= ${filters.dateTo}
         AND (${params.country}::text IS NULL OR metadata->>'country' = ${params.country})

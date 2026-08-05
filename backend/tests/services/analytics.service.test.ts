@@ -22,6 +22,7 @@ const runtimeRepositoryMock = vi.hoisted(() => ({
 
 const widgetRepositoryMock = vi.hoisted(() => ({
   findById: vi.fn(),
+  findByIdForWorkspace: vi.fn(),
 }));
 
 vi.mock('../../src/repositories/analytics.repository.js', () => ({
@@ -52,6 +53,7 @@ describe('AnalyticsService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     analyticsRepositoryMock.isSupportedEventType.mockReturnValue(true);
+    widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue({ id: 'widget-1' });
   });
 
   it('stores public analytics events for published widgets', async () => {
@@ -109,7 +111,7 @@ describe('AnalyticsService', () => {
   });
 
   it('returns dashboard overview metrics', async () => {
-    widgetRepositoryMock.findById.mockResolvedValue({ id: 'widget-1' });
+    widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue({ id: 'widget-1' });
     analyticsRepositoryMock.getOverview.mockResolvedValue({
       views: 100,
       uniqueVisitors: 80,
@@ -123,14 +125,14 @@ describe('AnalyticsService', () => {
       totalViewSessions: 100,
     });
 
-    const overview = await service.getOverview('widget-1', {});
+    const overview = await service.getOverview('workspace-1', 'widget-1', {});
 
     expect(overview.views).toBe(100);
     expect(overview.conversionRate).toBe(20);
   });
 
   it('returns timeline and device breakdowns', async () => {
-    widgetRepositoryMock.findById.mockResolvedValue({ id: 'widget-1' });
+    widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue({ id: 'widget-1' });
     analyticsRepositoryMock.getTimeline.mockResolvedValue([
       {
         period: new Date('2026-08-01T00:00:00.000Z'),
@@ -145,8 +147,8 @@ describe('AnalyticsService', () => {
     analyticsRepositoryMock.getDevices.mockResolvedValue([{ device: 'desktop', count: 40 }]);
     analyticsRepositoryMock.getBrowsers.mockResolvedValue([{ browser: 'Chrome', count: 35 }]);
 
-    const timeline = await service.getTimeline('widget-1', { granularity: 'day' });
-    const devices = await service.getDevices('widget-1', {});
+    const timeline = await service.getTimeline('workspace-1', 'widget-1', { granularity: 'day' });
+    const devices = await service.getDevices('workspace-1', 'widget-1', {});
 
     expect(timeline.points).toHaveLength(1);
     expect(devices.devices.desktop).toBe(40);

@@ -790,7 +790,9 @@ curl -X POST http://localhost:4000/public/widgets/wt_YOUR_EMBED_TOKEN/events \
 ### Example: Dashboard Overview
 
 ```bash
-curl "http://localhost:4000/api/v1/widgets/WIDGET_ID/analytics?dateFrom=2026-01-01T00:00:00.000Z&dateTo=2026-08-05T00:00:00.000Z"
+curl "http://localhost:4000/api/v1/widgets/WIDGET_ID/analytics?dateFrom=2026-01-01T00:00:00.000Z&dateTo=2026-08-05T00:00:00.000Z" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "X-Workspace-Id: YOUR_WORKSPACE_ID"
 ```
 
 ### Dashboard Metrics
@@ -837,6 +839,90 @@ All dashboard endpoints support: date range, widget version, country, browser, d
 - Extended event metadata stored in JSON `metadata` column (no schema redesign)
 - Analytics rate limit: 100 events/minute per IP
 - Internal IDs never exposed on public endpoints
+
+## Authentication & Authorization (Phase 9)
+
+Private management APIs require Supabase Auth. The backend verifies Supabase JWTs on every protected request — no custom JWT system is used.
+
+### Authentication Flow
+
+```text
+Client
+  │
+  ├─ Authorization: Bearer <supabase_access_token>
+  └─ X-Workspace-Id: <workspace_uuid>
+        │
+        ▼
+authenticate()  → verify JWT via Supabase Admin SDK
+        │
+        ▼
+requireWorkspace() → resolve membership + role
+        │
+        ▼
+requireRole() / requireOwnership() → authorize action
+        │
+        ▼
+Controller → Service → Repository (workspace-scoped)
+```
+
+1. Client sends a Supabase access token in the `Authorization: Bearer` header.
+2. `authenticate()` validates the token signature and expiry, then maps the Supabase user to a platform `User` record by email.
+3. Client sends the active workspace in the `X-Workspace-Id` header.
+4. `requireWorkspace()` loads the user's membership and attaches workspace context (including role).
+5. Route-level middleware enforces minimum role and widget ownership before handlers run.
+
+### Workspace Model
+
+Every private resource belongs to exactly one **Workspace**. Users access resources only through **Membership** records.
+
+| Role | Permissions |
+| ---- | ----------- |
+| **OWNER** | Full access including workspace ownership |
+| **ADMIN** | Full access except ownership transfer |
+| **EDITOR** | Create, update, publish, schema editing, submission viewing/export, analytics viewing |
+| **VIEWER** | Read-only: widgets, schema, versions, submissions, analytics |
+
+Workspace and widget IDs in request bodies are ignored — scope is derived from authenticated membership and route context.
+
+### Protected Endpoints
+
+All routes under `/api/v1/widgets/*` require authentication and workspace context:
+
+- Widget CRUD, archive, restore, duplicate
+- Schema read/update/reset/validate
+- Publish, unpublish, version history
+- Submissions list/detail/export/delete
+- Analytics dashboard endpoints
+
+Public runtime endpoints (`/public/widgets/:embedToken/*`) remain unauthenticated.
+
+### Example: Authenticated Request
+
+```bash
+curl http://localhost:4000/api/v1/widgets \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "X-Workspace-Id: 22222222-2222-2222-2222-222222222222"
+```
+
+### Security Model
+
+| Control | Behavior |
+| ------- | -------- |
+| JWT verification | Signature, expiry, and format validated via Supabase |
+| Missing auth | `401 Unauthorized` |
+| Invalid membership | `404 Not Found` (prevents workspace enumeration) |
+| Insufficient role | `403 Forbidden` |
+| Cross-workspace widget | `404 Not Found` (ownership middleware + repository scoping) |
+| Repository queries | Always filtered by authenticated `workspaceId` |
+
+### Middleware
+
+| Middleware | Purpose |
+| ---------- | ------- |
+| `authenticate()` | Verify Supabase JWT, attach `req.auth` |
+| `requireWorkspace()` | Resolve workspace membership from `X-Workspace-Id` |
+| `requireRole(minRole)` | Enforce minimum membership role |
+| `requireOwnership()` | Verify widget belongs to current workspace |
 
 ## Environment Variables
 
@@ -930,8 +1016,9 @@ Response:
 5. JSON Parser — Request body parsing
 6. Request Logger — Structured HTTP logging (Pino)
 7. Rate Limiter — Global rate limiting
-8. 404 Handler — Not found errors
-9. Error Handler — Global error normalization
+8. Auth Middleware — JWT authentication and workspace authorization (private routes)
+9. 404 Handler — Not found errors
+10. Error Handler — Global error normalization
 
 ## Logging
 
@@ -950,6 +1037,7 @@ Sensitive data (passwords, tokens, PII) is never logged.
 | --------------------- | ----------- | ----------------------- |
 | `ValidationError`         | 400         | `VALIDATION_ERROR`      |
 | `UnauthorizedError`       | 401         | `UNAUTHORIZED`          |
+| `ForbiddenError`          | 403         | `FORBIDDEN`             |
 | `NotFoundError`           | 404         | `NOT_FOUND`             |
 | `ConflictError`           | 409         | `CONFLICT`              |
 | `UnprocessableEntityError`| 422         | `UNPROCESSABLE_ENTITY`  |
@@ -957,34 +1045,21 @@ Sensitive data (passwords, tokens, PII) is never logged.
 
 ## Future Phases
 
-### Phase 4 — Auth & Builder Workflow
+### Phase 10 — Billing & Subscriptions
 
-- Authentication (JWT + refresh tokens)
-- Authorization middleware
-- Widget schema update endpoints
-- Publish / unpublish pipeline
+- Stripe integration
+- Plan limits and usage metering
+- Subscription lifecycle webhooks
 
-### Phase 5 — Runtime & Submissions
+### Phase 11 — AI Assistant
 
-- Public widget config endpoint
-- Submission ingestion
-- Analytics event tracking
-- Rate limiting per endpoint category
+- Widget generation and schema suggestions
+- Conversational builder API
 
-### Phase 6 — Advanced Features
+### Phase 12 — Marketplace & Realtime
 
-- AI assistant integration
 - Template marketplace APIs
-- Theme engine APIs
-- Webhook dispatch
-- Redis caching
-
-### Phase 7 — Production Hardening
-
-- Audit logging
-- Multi-tenant isolation tests
-- Performance optimization
-- Docker deployment
+- Realtime collaboration (Supabase Realtime)
 
 ## Related Documentation
 

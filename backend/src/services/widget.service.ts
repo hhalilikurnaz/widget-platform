@@ -12,13 +12,15 @@ import { generateEmbedToken } from '../utils/embed-token.js';
 import { buildPaginationMeta, parsePagination } from '../utils/pagination.js';
 import { rethrowPrismaConflict } from '../utils/prisma-error.js';
 import { buildUniqueSlug, slugify } from '../utils/slug.js';
+import { requireWidgetInWorkspace } from '../utils/workspace-access.js';
 import { toWidgetDto } from '../utils/widget.mapper.js';
 
 export class WidgetService {
-  async listWidgets(query: WidgetListFilters): Promise<PaginatedWidgets> {
+  async listWidgets(workspaceId: string, query: Omit<WidgetListFilters, 'workspaceId'>): Promise<PaginatedWidgets> {
     const pagination = parsePagination(query.page, query.limit);
     const filters: WidgetListFilters = {
       ...query,
+      workspaceId,
       page: pagination.page,
       limit: pagination.limit,
     };
@@ -31,22 +33,24 @@ export class WidgetService {
     };
   }
 
-  async getWidget(id: string): Promise<WidgetDto> {
-    const widget = await widgetRepository.findById(id);
-    if (!widget) {
-      throw new NotFoundError('Widget not found');
-    }
-
+  async getWidget(workspaceId: string, id: string): Promise<WidgetDto> {
+    const widget = await requireWidgetInWorkspace(id, workspaceId);
     return toWidgetDto(widget);
   }
 
-  async createWidget(input: CreateWidgetInput): Promise<WidgetDto> {
-    const slug = await this.generateUniqueSlug(input.workspaceId, input.name);
+  async createWidget(
+    workspaceId: string,
+    createdBy: string,
+    input: CreateWidgetInput,
+  ): Promise<WidgetDto> {
+    const slug = await this.generateUniqueSlug(workspaceId, input.name);
     const embedToken = await this.generateUniqueEmbedToken();
 
     let widget;
     try {
       widget = await widgetRepository.createWidget({
+        workspaceId,
+        createdBy,
         ...input,
         slug,
         embedToken,
@@ -63,8 +67,8 @@ export class WidgetService {
     return toWidgetDto(widget);
   }
 
-  async updateWidget(id: string, input: UpdateWidgetInput): Promise<WidgetDto> {
-    const existing = await this.getActiveWidget(id);
+  async updateWidget(workspaceId: string, id: string, input: UpdateWidgetInput): Promise<WidgetDto> {
+    const existing = await this.getActiveWidget(workspaceId, id);
     const widget = await widgetRepository.updateWidget(existing.id, input);
 
     logger.info({ widgetId: widget.id, workspaceId: widget.workspaceId }, 'Widget updated');
@@ -72,8 +76,8 @@ export class WidgetService {
     return toWidgetDto(widget);
   }
 
-  async archiveWidget(id: string): Promise<WidgetDto> {
-    const existing = await this.getActiveWidget(id);
+  async archiveWidget(workspaceId: string, id: string): Promise<WidgetDto> {
+    const existing = await this.getActiveWidget(workspaceId, id);
 
     if (existing.status === 'ARCHIVED') {
       throw new UnprocessableEntityError('Widget is already archived');
@@ -86,8 +90,8 @@ export class WidgetService {
     return toWidgetDto(widget);
   }
 
-  async restoreWidget(id: string): Promise<WidgetDto> {
-    const existing = await this.getActiveWidget(id);
+  async restoreWidget(workspaceId: string, id: string): Promise<WidgetDto> {
+    const existing = await this.getActiveWidget(workspaceId, id);
 
     if (existing.status !== 'ARCHIVED') {
       throw new UnprocessableEntityError('Only archived widgets can be restored');
@@ -100,13 +104,13 @@ export class WidgetService {
     return toWidgetDto(widget);
   }
 
-  async duplicateWidget(id: string, createdBy: string): Promise<WidgetDto> {
-    const source = await widgetRepository.findByIdWithVersion(id);
+  async duplicateWidget(workspaceId: string, id: string, createdBy: string): Promise<WidgetDto> {
+    const source = await widgetRepository.findByIdWithVersionForWorkspace(id, workspaceId);
     if (!source) {
       throw new NotFoundError('Widget not found');
     }
 
-    const slug = await this.generateUniqueSlug(source.workspaceId, `${source.name} copy`);
+    const slug = await this.generateUniqueSlug(workspaceId, `${source.name} copy`);
     const embedToken = await this.generateUniqueEmbedToken();
 
     let widget;
@@ -132,19 +136,15 @@ export class WidgetService {
     return toWidgetDto(widget);
   }
 
-  async deleteWidget(id: string): Promise<void> {
-    const existing = await this.getActiveWidget(id);
+  async deleteWidget(workspaceId: string, id: string): Promise<void> {
+    const existing = await this.getActiveWidget(workspaceId, id);
     await widgetRepository.softDelete(existing.id);
 
     logger.info({ widgetId: existing.id, workspaceId: existing.workspaceId }, 'Widget deleted');
   }
 
-  private async getActiveWidget(id: string): Promise<WidgetDto> {
-    const widget = await widgetRepository.findById(id);
-    if (!widget) {
-      throw new NotFoundError('Widget not found');
-    }
-
+  private async getActiveWidget(workspaceId: string, id: string): Promise<WidgetDto> {
+    const widget = await requireWidgetInWorkspace(id, workspaceId);
     return toWidgetDto(widget);
   }
 

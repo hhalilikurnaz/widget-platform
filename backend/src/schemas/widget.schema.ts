@@ -8,11 +8,9 @@ export const widgetIdParamsSchema = z.object({
 });
 
 export const createWidgetBodySchema = z.object({
-  workspaceId: uuidSchema,
   name: z.string().trim().min(1, 'Widget name is required').max(255),
   description: z.string().trim().max(2000).optional(),
   themeId: uuidSchema.optional(),
-  createdBy: uuidSchema,
 });
 
 export const updateWidgetBodySchema = z
@@ -25,12 +23,9 @@ export const updateWidgetBodySchema = z
     message: 'At least one field must be provided',
   });
 
-export const duplicateWidgetBodySchema = z.object({
-  createdBy: uuidSchema,
-});
+export const duplicateWidgetBodySchema = z.object({}).default({});
 
 export const listWidgetsQuerySchema = z.object({
-  workspaceId: uuidSchema,
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(25),
   search: z

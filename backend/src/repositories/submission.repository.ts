@@ -79,6 +79,7 @@ export class SubmissionRepository {
   }
 
   async findSubmission(
+    workspaceId: string,
     widgetId: string,
     submissionId: string,
   ): Promise<(Submission & { widgetVersion: { version: number }; widget: { name: string } }) | null> {
@@ -86,6 +87,7 @@ export class SubmissionRepository {
       where: {
         id: submissionId,
         widgetId,
+        workspaceId,
         deletedAt: null,
       },
       include: {
@@ -95,11 +97,12 @@ export class SubmissionRepository {
     });
   }
 
-  async deleteSubmission(widgetId: string, submissionId: string): Promise<void> {
+  async deleteSubmission(workspaceId: string, widgetId: string, submissionId: string): Promise<void> {
     await prisma.submission.updateMany({
       where: {
         id: submissionId,
         widgetId,
+        workspaceId,
         deletedAt: null,
       },
       data: {
@@ -134,6 +137,7 @@ export class SubmissionRepository {
     filters: SubmissionListFilters | SubmissionExportFilters,
   ): Promise<Prisma.SubmissionWhereInput> {
     const where: Prisma.SubmissionWhereInput = {
+      workspaceId: filters.workspaceId,
       widgetId: filters.widgetId,
       deletedAt: null,
     };

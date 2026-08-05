@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotFoundError, UnprocessableEntityError } from '../../src/errors/index.js';
 import { WidgetSchemaService } from '../../src/services/widget-schema.service.js';
 import { createDefaultSchema } from '../../src/utils/schema-default.js';
+import { TEST_WORKSPACE_ID } from '../helpers/workspace-fixtures.js';
 
 const repositoryMock = vi.hoisted(() => ({
   getSchema: vi.fn(),
@@ -12,8 +13,16 @@ const repositoryMock = vi.hoisted(() => ({
   touchWidget: vi.fn(),
 }));
 
+const widgetRepositoryMock = vi.hoisted(() => ({
+  findByIdForWorkspace: vi.fn(),
+}));
+
 vi.mock('../../src/repositories/widget-schema.repository.js', () => ({
   widgetSchemaRepository: repositoryMock,
+}));
+
+vi.mock('../../src/repositories/widget.repository.js', () => ({
+  widgetRepository: widgetRepositoryMock,
 }));
 
 vi.mock('../../src/logger/index.js', () => ({
@@ -31,6 +40,10 @@ describe('WidgetSchemaService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue({
+      id: 'widget-1',
+      workspaceId: TEST_WORKSPACE_ID,
+    });
   });
 
   it('loads schema for an existing widget', async () => {
@@ -43,7 +56,7 @@ describe('WidgetSchemaService', () => {
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
 
-    const result = await service.getSchema('widget-1');
+    const result = await service.getSchema('widget-1', TEST_WORKSPACE_ID);
 
     expect(result.widgetId).toBe('widget-1');
     expect(result.schema.version).toBe(1);
@@ -52,7 +65,7 @@ describe('WidgetSchemaService', () => {
   it('throws not found when schema is missing', async () => {
     repositoryMock.getSchema.mockResolvedValue(null);
 
-    await expect(service.getSchema('missing')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.getSchema('missing', TEST_WORKSPACE_ID)).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('updates draft schema after validation', async () => {
@@ -63,7 +76,11 @@ describe('WidgetSchemaService', () => {
     repositoryMock.updateSchema.mockResolvedValue(undefined);
     repositoryMock.touchWidget.mockResolvedValue(new Date('2026-01-02T00:00:00.000Z'));
 
-    const result = await service.updateSchema('widget-1', validSchema as Record<string, unknown>);
+    const result = await service.updateSchema(
+      'widget-1',
+      TEST_WORKSPACE_ID,
+      validSchema as Record<string, unknown>,
+    );
 
     expect(result.versionId).toBe('version-1');
     expect(repositoryMock.updateSchema).toHaveBeenCalledOnce();
@@ -76,7 +93,7 @@ describe('WidgetSchemaService', () => {
     });
 
     await expect(
-      service.updateSchema('widget-1', validSchema as Record<string, unknown>),
+      service.updateSchema('widget-1', TEST_WORKSPACE_ID, validSchema as Record<string, unknown>),
     ).rejects.toBeInstanceOf(UnprocessableEntityError);
   });
 
@@ -87,9 +104,12 @@ describe('WidgetSchemaService', () => {
     });
 
     await expect(
-      service.updateSchema('widget-1', {
+      service.updateSchema('widget-1', TEST_WORKSPACE_ID, {
         version: 1,
-        fields: [{ id: 'dup', type: 'text', label: 'A' }, { id: 'dup', type: 'email', label: 'B' }],
+        fields: [
+          { id: 'dup', type: 'text', label: 'A' },
+          { id: 'dup', type: 'email', label: 'B' },
+        ],
       }),
     ).rejects.toBeInstanceOf(UnprocessableEntityError);
   });
@@ -102,7 +122,7 @@ describe('WidgetSchemaService', () => {
     repositoryMock.resetSchema.mockResolvedValue(undefined);
     repositoryMock.touchWidget.mockResolvedValue(new Date('2026-01-03T00:00:00.000Z'));
 
-    const result = await service.resetSchema('widget-1');
+    const result = await service.resetSchema('widget-1', TEST_WORKSPACE_ID);
 
     expect(result.schema.metadata).toEqual({ name: 'Contact Us' });
     expect(repositoryMock.resetSchema).toHaveBeenCalledOnce();

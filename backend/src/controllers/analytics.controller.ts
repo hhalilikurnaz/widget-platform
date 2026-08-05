@@ -8,6 +8,7 @@ import type {
 } from '../schemas/analytics.schema.js';
 import type { WidgetIdParams } from '../schemas/widget.schema.js';
 import { analyticsService } from '../services/analytics.service.js';
+import { getWorkspaceScope } from '../utils/request-auth.js';
 import { sendSuccess } from '../utils/response.js';
 
 export class AnalyticsController {
@@ -28,7 +29,8 @@ export class AnalyticsController {
     try {
       const { id } = req.params as WidgetIdParams;
       const query = req.validatedQuery as AnalyticsQuery;
-      const overview = await analyticsService.getOverview(id, query);
+      const { workspaceId } = getWorkspaceScope(req);
+      const overview = await analyticsService.getOverview(workspaceId, id, query);
 
       sendSuccess(res, overview);
     } catch (error) {
@@ -40,7 +42,8 @@ export class AnalyticsController {
     try {
       const { id } = req.params as WidgetIdParams;
       const query = req.validatedQuery as AnalyticsTimelineQuery;
-      const timeline = await analyticsService.getTimeline(id, query);
+      const { workspaceId } = getWorkspaceScope(req);
+      const timeline = await analyticsService.getTimeline(workspaceId, id, query);
 
       sendSuccess(res, timeline);
     } catch (error) {
@@ -52,7 +55,8 @@ export class AnalyticsController {
     try {
       const { id } = req.params as WidgetIdParams;
       const query = req.validatedQuery as AnalyticsQuery;
-      const devices = await analyticsService.getDevices(id, query);
+      const { workspaceId } = getWorkspaceScope(req);
+      const devices = await analyticsService.getDevices(workspaceId, id, query);
 
       sendSuccess(res, devices);
     } catch (error) {
@@ -64,7 +68,8 @@ export class AnalyticsController {
     try {
       const { id } = req.params as WidgetIdParams;
       const query = req.validatedQuery as AnalyticsQuery;
-      const countries = await analyticsService.getCountries(id, query);
+      const { workspaceId } = getWorkspaceScope(req);
+      const countries = await analyticsService.getCountries(workspaceId, id, query);
 
       sendSuccess(res, countries);
     } catch (error) {
@@ -76,7 +81,8 @@ export class AnalyticsController {
     try {
       const { id } = req.params as WidgetIdParams;
       const query = req.validatedQuery as AnalyticsQuery;
-      const sources = await analyticsService.getSources(id, query);
+      const { workspaceId } = getWorkspaceScope(req);
+      const sources = await analyticsService.getSources(workspaceId, id, query);
 
       sendSuccess(res, sources);
     } catch (error) {
@@ -88,7 +94,8 @@ export class AnalyticsController {
     try {
       const { id } = req.params as WidgetIdParams;
       const query = req.validatedQuery as AnalyticsQuery;
-      const performance = await analyticsService.getPerformance(id, query);
+      const { workspaceId } = getWorkspaceScope(req);
+      const performance = await analyticsService.getPerformance(workspaceId, id, query);
 
       sendSuccess(res, performance);
     } catch (error) {

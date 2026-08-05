@@ -19,6 +19,7 @@ const submissionRepositoryMock = vi.hoisted(() => ({
 
 const widgetRepositoryMock = vi.hoisted(() => ({
   findById: vi.fn(),
+  findByIdForWorkspace: vi.fn(),
 }));
 
 vi.mock('../../src/repositories/runtime.repository.js', () => ({
@@ -67,6 +68,7 @@ describe('SubmissionService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue({ id: 'widget-1' });
   });
 
   it('stores a valid public submission against the published version', async () => {
@@ -175,7 +177,7 @@ describe('SubmissionService', () => {
   });
 
   it('lists submissions for an existing widget', async () => {
-    widgetRepositoryMock.findById.mockResolvedValue({ id: 'widget-1' });
+    widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue({ id: 'widget-1' });
     submissionRepositoryMock.findSubmissions.mockResolvedValue({
       items: [
         {
@@ -192,7 +194,7 @@ describe('SubmissionService', () => {
       total: 1,
     });
 
-    const result = await service.listSubmissions('widget-1', {
+    const result = await service.listSubmissions('workspace-1', 'widget-1', {
       page: 1,
       limit: 25,
       sort: 'createdAt',

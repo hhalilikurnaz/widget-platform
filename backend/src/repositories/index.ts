@@ -4,3 +4,5 @@ export { widgetVersionRepository, WidgetVersionRepository } from './widget-versi
 export { runtimeRepository, RuntimeRepository } from './runtime.repository.js';
 export { submissionRepository, SubmissionRepository } from './submission.repository.js';
 export { analyticsRepository, AnalyticsRepository } from './analytics.repository.js';
+export { membershipRepository, MembershipRepository } from './membership.repository.js';
+export { userRepository, UserRepository } from './user.repository.js';

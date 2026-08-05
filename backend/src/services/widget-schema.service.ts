@@ -11,10 +11,11 @@ import type {
 import { createDefaultSchema } from '../utils/schema-default.js';
 import { validateWidgetSchema } from '../utils/schema-validator.js';
 import { normalizeSchemaDocument } from '../utils/schema-version.js';
+import { requireWidgetInWorkspace } from '../utils/workspace-access.js';
 
 export class WidgetSchemaService {
-  async getSchema(widgetId: string): Promise<WidgetSchemaDto> {
-    const record = await widgetSchemaRepository.getSchema(widgetId);
+  async getSchema(widgetId: string, workspaceId: string): Promise<WidgetSchemaDto> {
+    const record = await widgetSchemaRepository.getSchema(widgetId, workspaceId);
     if (!record) {
       throw new NotFoundError('Widget schema not found');
     }
@@ -29,8 +30,12 @@ export class WidgetSchemaService {
     return this.toSchemaDto(record, schema);
   }
 
-  async updateSchema(widgetId: string, schema: Record<string, unknown>): Promise<WidgetSchemaDto> {
-    const editable = await this.getEditableVersion(widgetId);
+  async updateSchema(
+    widgetId: string,
+    workspaceId: string,
+    schema: Record<string, unknown>,
+  ): Promise<WidgetSchemaDto> {
+    const editable = await this.getEditableVersion(widgetId, workspaceId);
     this.ensureSchemaIsValid(schema);
 
     const normalized = normalizeSchemaDocument(schema);
@@ -55,8 +60,8 @@ export class WidgetSchemaService {
     };
   }
 
-  async resetSchema(widgetId: string): Promise<WidgetSchemaDto> {
-    const editable = await this.getEditableVersion(widgetId);
+  async resetSchema(widgetId: string, workspaceId: string): Promise<WidgetSchemaDto> {
+    const editable = await this.getEditableVersion(widgetId, workspaceId);
     const defaultSchema = createDefaultSchema(editable.widget.name);
 
     await widgetSchemaRepository.resetSchema(editable.version.id, defaultSchema);
@@ -88,8 +93,9 @@ export class WidgetSchemaService {
     return result;
   }
 
-  private async getEditableVersion(widgetId: string) {
-    const record = await widgetSchemaRepository.getCurrentVersion(widgetId);
+  private async getEditableVersion(widgetId: string, workspaceId: string) {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
+    const record = await widgetSchemaRepository.getCurrentVersion(widgetId, workspaceId);
     if (!record) {
       throw new NotFoundError('Widget not found');
     }

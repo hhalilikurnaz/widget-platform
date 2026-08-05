@@ -2,7 +2,6 @@ import { NotFoundError, ValidationError } from '../errors/index.js';
 import { logger } from '../logger/index.js';
 import { analyticsRepository } from '../repositories/analytics.repository.js';
 import { runtimeRepository } from '../repositories/runtime.repository.js';
-import { widgetRepository } from '../repositories/widget.repository.js';
 import type {
   AnalyticsQuery,
   AnalyticsTimelineQuery,
@@ -30,6 +29,7 @@ import {
   buildAnalyticsTimelineFilters,
 } from '../utils/analytics-filter.js';
 import { buildStoredEventMetadata, extractEventTimestamp } from '../utils/analytics-mapper.js';
+import { requireWidgetInWorkspace } from '../utils/workspace-access.js';
 
 const NOT_FOUND_MESSAGE = 'Widget not found';
 
@@ -70,31 +70,43 @@ export class AnalyticsService {
     });
   }
 
-  async getOverview(widgetId: string, query: AnalyticsQuery): Promise<AnalyticsOverviewDto> {
-    await this.ensureWidgetExists(widgetId);
-    const filters = buildAnalyticsFilters(widgetId, query);
+  async getOverview(
+    workspaceId: string,
+    widgetId: string,
+    query: AnalyticsQuery,
+  ): Promise<AnalyticsOverviewDto> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
+    const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const counts = await analyticsRepository.getOverview(filters, widgetVersionId);
 
-    logger.info({ widgetId }, 'Dashboard queried');
+    logger.info({ widgetId, workspaceId }, 'Dashboard queried');
 
     return toAnalyticsOverview(counts, filters.dateFrom, filters.dateTo);
   }
 
-  async getTimeline(widgetId: string, query: AnalyticsTimelineQuery): Promise<AnalyticsTimelineDto> {
-    await this.ensureWidgetExists(widgetId);
-    const filters = buildAnalyticsTimelineFilters(widgetId, query);
+  async getTimeline(
+    workspaceId: string,
+    widgetId: string,
+    query: AnalyticsTimelineQuery,
+  ): Promise<AnalyticsTimelineDto> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
+    const filters = buildAnalyticsTimelineFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const rows = await analyticsRepository.getTimeline(filters, widgetVersionId);
 
-    logger.info({ widgetId, granularity: filters.granularity }, 'Timeline queried');
+    logger.info({ widgetId, workspaceId, granularity: filters.granularity }, 'Timeline queried');
 
     return toAnalyticsTimeline(rows, filters.granularity);
   }
 
-  async getDevices(widgetId: string, query: AnalyticsQuery): Promise<AnalyticsDevicesResponseDto> {
-    await this.ensureWidgetExists(widgetId);
-    const filters = buildAnalyticsFilters(widgetId, query);
+  async getDevices(
+    workspaceId: string,
+    widgetId: string,
+    query: AnalyticsQuery,
+  ): Promise<AnalyticsDevicesResponseDto> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
+    const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const [deviceRows, browserRows] = await Promise.all([
       analyticsRepository.getDevices(filters, widgetVersionId),
@@ -107,38 +119,43 @@ export class AnalyticsService {
     };
   }
 
-  async getCountries(widgetId: string, query: AnalyticsQuery): Promise<AnalyticsCountryBreakdownDto> {
-    await this.ensureWidgetExists(widgetId);
-    const filters = buildAnalyticsFilters(widgetId, query);
+  async getCountries(
+    workspaceId: string,
+    widgetId: string,
+    query: AnalyticsQuery,
+  ): Promise<AnalyticsCountryBreakdownDto> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
+    const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const rows = await analyticsRepository.getCountries(filters, widgetVersionId);
 
     return toCountryBreakdown(rows);
   }
 
-  async getSources(widgetId: string, query: AnalyticsQuery): Promise<AnalyticsSourceBreakdownDto> {
-    await this.ensureWidgetExists(widgetId);
-    const filters = buildAnalyticsFilters(widgetId, query);
+  async getSources(
+    workspaceId: string,
+    widgetId: string,
+    query: AnalyticsQuery,
+  ): Promise<AnalyticsSourceBreakdownDto> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
+    const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const rows = await analyticsRepository.getSources(filters, widgetVersionId);
 
     return toSourceBreakdown(rows);
   }
 
-  async getPerformance(widgetId: string, query: AnalyticsQuery): Promise<AnalyticsPerformanceDto> {
-    await this.ensureWidgetExists(widgetId);
-    const filters = buildAnalyticsFilters(widgetId, query);
+  async getPerformance(
+    workspaceId: string,
+    widgetId: string,
+    query: AnalyticsQuery,
+  ): Promise<AnalyticsPerformanceDto> {
+    await requireWidgetInWorkspace(widgetId, workspaceId);
+    const filters = buildAnalyticsFilters(workspaceId, widgetId, query);
     const widgetVersionId = await this.resolveVersionFilter(widgetId, query.version);
     const row = await analyticsRepository.getPerformance(filters, widgetVersionId);
 
     return toPerformanceMetrics(row);
-  }
-
-  private async ensureWidgetExists(widgetId: string): Promise<void> {
-    const widget = await widgetRepository.findById(widgetId);
-    if (!widget) {
-      throw new NotFoundError(NOT_FOUND_MESSAGE);
-    }
   }
 
   private async resolveVersionFilter(

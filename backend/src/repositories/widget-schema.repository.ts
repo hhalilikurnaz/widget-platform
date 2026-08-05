@@ -17,10 +17,11 @@ export interface SchemaRecord {
 }
 
 export class WidgetSchemaRepository {
-  async getCurrentVersion(widgetId: string): Promise<CurrentVersionRecord | null> {
+  async getCurrentVersion(widgetId: string, workspaceId: string): Promise<CurrentVersionRecord | null> {
     const widget = await prisma.widget.findFirst({
       where: {
         id: widgetId,
+        workspaceId,
         deletedAt: null,
       },
       include: {
@@ -38,8 +39,8 @@ export class WidgetSchemaRepository {
     };
   }
 
-  async getSchema(widgetId: string): Promise<SchemaRecord | null> {
-    const record = await this.getCurrentVersion(widgetId);
+  async getSchema(widgetId: string, workspaceId: string): Promise<SchemaRecord | null> {
+    const record = await this.getCurrentVersion(widgetId, workspaceId);
     if (!record) {
       return null;
     }

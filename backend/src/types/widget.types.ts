@@ -31,11 +31,9 @@ export interface WidgetListFilters {
 }
 
 export interface CreateWidgetInput {
-  workspaceId: string;
   name: string;
   description?: string;
   themeId?: string;
-  createdBy: string;
 }
 
 export interface UpdateWidgetInput {

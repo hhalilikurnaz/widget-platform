@@ -40,10 +40,50 @@ export class WidgetRepository {
     });
   }
 
-  async findByIdWithVersion(id: string, includeDeleted = false): Promise<WidgetWithVersion | null> {
+  async findByIdForWorkspace(
+    id: string,
+    workspaceId: string,
+    includeDeleted = false,
+  ): Promise<Widget | null> {
     return prisma.widget.findFirst({
       where: {
         id,
+        workspaceId,
+        ...(includeDeleted ? {} : { deletedAt: null }),
+      },
+    });
+  }
+
+  async findByIdWithVersion(
+    id: string,
+    includeDeleted = false,
+  ): Promise<WidgetWithVersion | null> {
+    return prisma.widget.findFirst({
+      where: {
+        id,
+        ...(includeDeleted ? {} : { deletedAt: null }),
+      },
+      include: {
+        currentVersion: {
+          select: {
+            id: true,
+            version: true,
+            schemaJson: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findByIdWithVersionForWorkspace(
+    id: string,
+    workspaceId: string,
+    includeDeleted = false,
+  ): Promise<WidgetWithVersion | null> {
+    return prisma.widget.findFirst({
+      where: {
+        id,
+        workspaceId,
         ...(includeDeleted ? {} : { deletedAt: null }),
       },
       include: {
@@ -81,7 +121,14 @@ export class WidgetRepository {
     return existing !== null;
   }
 
-  async createWidget(input: CreateWidgetInput & { slug: string; embedToken: string }): Promise<Widget> {
+  async createWidget(
+    input: CreateWidgetInput & {
+      workspaceId: string;
+      createdBy: string;
+      slug: string;
+      embedToken: string;
+    },
+  ): Promise<Widget> {
     return prisma.$transaction(async (tx) => {
       const widget = await tx.widget.create({
         data: {

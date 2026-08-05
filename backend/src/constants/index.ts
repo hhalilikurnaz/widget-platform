@@ -41,4 +41,6 @@ export const ANALYTICS_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 export const ANALYTICS_RATE_LIMIT_MAX_REQUESTS = 100;
 
+export const WORKSPACE_HEADER = 'X-Workspace-Id';
+
 export const EMBED_TOKEN_PATTERN = /^wt_[a-f0-9]{32}$/;

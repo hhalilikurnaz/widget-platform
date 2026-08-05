@@ -8,6 +8,7 @@ const widgetRepositoryMock = vi.hoisted(() => ({
   slugExists: vi.fn(),
   embedTokenExists: vi.fn(),
   findById: vi.fn(),
+  findByIdForWorkspace: vi.fn(),
 }));
 
 const versionRepositoryMock = vi.hoisted(() => ({
@@ -67,6 +68,7 @@ describe('WidgetVersionService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue(widget);
   });
 
   it('publishes a valid draft widget', async () => {
@@ -87,7 +89,7 @@ describe('WidgetVersionService', () => {
       },
     });
 
-    const result = await service.publishWidget('widget-1');
+    const result = await service.publishWidget('widget-1', 'workspace-1');
 
     expect(result.status).toBe('PUBLISHED');
     expect(result.version).toBe(2);
@@ -97,7 +99,7 @@ describe('WidgetVersionService', () => {
   it('rejects publish when widget is missing', async () => {
     versionRepositoryMock.findWidgetWithCurrentVersion.mockResolvedValue(null);
 
-    await expect(service.publishWidget('missing')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.publishWidget('missing', 'workspace-1')).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('rejects publish when validation fails', async () => {
@@ -107,7 +109,9 @@ describe('WidgetVersionService', () => {
     });
     widgetRepositoryMock.slugExists.mockResolvedValue(false);
 
-    await expect(service.publishWidget('widget-1')).rejects.toBeInstanceOf(UnprocessableEntityError);
+    await expect(service.publishWidget('widget-1', 'workspace-1')).rejects.toBeInstanceOf(
+      UnprocessableEntityError,
+    );
   });
 
   it('unpublishes a published widget', async () => {
@@ -118,27 +122,27 @@ describe('WidgetVersionService', () => {
     });
     versionRepositoryMock.unpublish.mockResolvedValue({ ...widget, status: 'DRAFT' });
 
-    const result = await service.unpublishWidget('widget-1');
+    const result = await service.unpublishWidget('widget-1', 'workspace-1');
 
     expect(result.status).toBe('DRAFT');
     expect(result.publishedAt).toBeNull();
   });
 
   it('lists version history', async () => {
-    widgetRepositoryMock.findById.mockResolvedValue(widget);
+    widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue(widget);
     versionRepositoryMock.getVersions.mockResolvedValue([
       { ...draftVersion, version: 2, published: true },
       draftVersion,
     ]);
 
-    const versions = await service.listVersions('widget-1');
+    const versions = await service.listVersions('widget-1', 'workspace-1');
 
     expect(versions).toHaveLength(2);
     expect(versions[0].author).toBe('user-1');
   });
 
   it('restores a version as a new draft', async () => {
-    widgetRepositoryMock.findById.mockResolvedValue(widget);
+    widgetRepositoryMock.findByIdForWorkspace.mockResolvedValue(widget);
     versionRepositoryMock.getVersion.mockResolvedValue({
       ...draftVersion,
       id: 'version-2',
@@ -151,7 +155,7 @@ describe('WidgetVersionService', () => {
       restoredFromVersion: 2,
     });
 
-    const result = await service.restoreVersion('widget-1', 'version-2');
+    const result = await service.restoreVersion('widget-1', 'workspace-1', 'version-2');
 
     expect(result.status).toBe('DRAFT');
     expect(result.version).toBe(3);

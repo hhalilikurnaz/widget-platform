@@ -2,78 +2,86 @@ openapi: 3.1.0
 info:
   title: Widget Platform API
   version: 1.0.0
-  description: Widget Platform API including management, schema, publishing, public runtime, submissions, and analytics (Phase 3–8)
+  description: Widget Platform API including management, schema, publishing, public runtime, submissions, analytics (Phase
+    3–8), and authentication/workspace authorization (Phase 9)
 servers:
-  - url: http://localhost:4000
-    description: Local development
+- url: http://localhost:4000
+  description: Local development
 tags:
-  - name: Widgets
-    description: Widget management endpoints
-  - name: Public Runtime
-    description: Public embed runtime endpoints
-  - name: Submissions
-    description: Widget submission management endpoints
-  - name: Analytics
-    description: Widget analytics dashboard endpoints
+- name: Widgets
+  description: Widget management endpoints
+- name: Public Runtime
+  description: Public embed runtime endpoints
+- name: Submissions
+  description: Widget submission management endpoints
+- name: Analytics
+  description: Widget analytics dashboard endpoints
 paths:
   /api/v1/widgets:
     get:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: List widgets
       parameters:
-        - in: query
-          name: workspaceId
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - in: query
-          name: page
-          schema:
-            type: integer
-            default: 1
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 25
-            maximum: 100
-        - in: query
-          name: search
-          schema:
-            type: string
-        - in: query
-          name: sort
-          schema:
-            type: string
-            enum: [createdAt, updatedAt, publishedAt, name]
-            default: updatedAt
-        - in: query
-          name: order
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
-        - in: query
-          name: status
-          schema:
-            type: string
-            enum: [DRAFT, PUBLISHED, ARCHIVED]
-        - in: query
-          name: themeId
-          schema:
-            type: string
-            format: uuid
-        - in: query
-          name: createdBy
-          schema:
-            type: string
-            format: uuid
-        - in: query
-          name: deleted
-          schema:
-            type: string
-            enum: ['true', 'false']
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 25
+          maximum: 100
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: sort
+        schema:
+          type: string
+          enum:
+          - createdAt
+          - updatedAt
+          - publishedAt
+          - name
+          default: updatedAt
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+          default: desc
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - DRAFT
+          - PUBLISHED
+          - ARCHIVED
+      - in: query
+        name: themeId
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: createdBy
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: deleted
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
       responses:
         '200':
           description: Paginated widget list
@@ -83,8 +91,15 @@ paths:
                 $ref: '#/components/schemas/WidgetListResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
     post:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Create widget
       requestBody:
         required: true
@@ -93,10 +108,8 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateWidgetRequest'
             example:
-              workspaceId: 22222222-2222-2222-2222-222222222222
               name: Contact Us
               description: Primary contact form
-              createdBy: 33333333-3333-3333-3333-333333333333
       responses:
         '201':
           description: Widget created
@@ -106,12 +119,22 @@ paths:
                 $ref: '#/components/schemas/WidgetResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
   /api/v1/widgets/{id}:
     get:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Get widget by ID
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       responses:
         '200':
           description: Widget details
@@ -121,11 +144,19 @@ paths:
                 $ref: '#/components/schemas/WidgetResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
     patch:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Update widget metadata
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       requestBody:
         required: true
         content:
@@ -146,22 +177,38 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
     delete:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Soft delete widget
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       responses:
         '204':
           description: Widget deleted
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/archive:
     post:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Archive widget
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       responses:
         '200':
           description: Widget archived
@@ -173,12 +220,20 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/restore:
     post:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Restore archived widget
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       responses:
         '200':
           description: Widget restored
@@ -190,12 +245,20 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/duplicate:
     post:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Duplicate widget
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       requestBody:
         required: true
         content:
@@ -213,12 +276,20 @@ paths:
                 $ref: '#/components/schemas/WidgetResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/schema:
     get:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Get widget draft schema
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       responses:
         '200':
           description: Current draft schema
@@ -254,11 +325,19 @@ paths:
                 timestamp: '2026-08-05T12:00:00.000Z'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
     put:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Update widget schema
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       requestBody:
         required: true
         content:
@@ -276,12 +355,20 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/schema/reset:
     post:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Reset widget schema to default template
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       responses:
         '200':
           description: Schema reset
@@ -293,12 +380,20 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/schema/validate:
     post:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Validate widget schema without saving
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       requestBody:
         required: true
         content:
@@ -314,12 +409,20 @@ paths:
                 $ref: '#/components/schemas/WidgetSchemaValidationResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/publish:
     post:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Publish widget
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       responses:
         '200':
           description: Widget published
@@ -331,12 +434,20 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/unpublish:
     post:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Unpublish widget
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       responses:
         '200':
           description: Widget unpublished
@@ -348,12 +459,20 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/versions:
     get:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: List widget version history
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       responses:
         '200':
           description: Version history
@@ -363,18 +482,26 @@ paths:
                 $ref: '#/components/schemas/WidgetVersionListResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/versions/{versionId}:
     get:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Get widget version detail
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - in: path
-          name: versionId
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - in: path
+        name: versionId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Version detail
@@ -384,18 +511,26 @@ paths:
                 $ref: '#/components/schemas/WidgetVersionDetailResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/versions/{versionId}/restore:
     post:
-      tags: [Widgets]
+      tags:
+      - Widgets
       summary: Restore widget version as new draft
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - in: path
-          name: versionId
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - in: path
+        name: versionId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Version restored as new draft
@@ -405,16 +540,23 @@ paths:
                 $ref: '#/components/schemas/RestoreVersionResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /public/widgets/{embedToken}/config:
     get:
-      tags: [Public Runtime]
+      tags:
+      - Public Runtime
       summary: Get published widget public configuration
       parameters:
-        - $ref: '#/components/parameters/EmbedToken'
-        - in: header
-          name: If-None-Match
-          schema:
-            type: string
+      - $ref: '#/components/parameters/EmbedToken'
+      - in: header
+        name: If-None-Match
+        schema:
+          type: string
       responses:
         '200':
           description: Published widget configuration
@@ -438,14 +580,15 @@ paths:
           $ref: '#/components/responses/NotFound'
   /public/widgets/{embedToken}/runtime:
     get:
-      tags: [Public Runtime]
+      tags:
+      - Public Runtime
       summary: Get full runtime payload for widget.js
       parameters:
-        - $ref: '#/components/parameters/EmbedToken'
-        - in: header
-          name: If-None-Match
-          schema:
-            type: string
+      - $ref: '#/components/parameters/EmbedToken'
+      - in: header
+        name: If-None-Match
+        schema:
+          type: string
       responses:
         '200':
           description: Runtime payload
@@ -469,10 +612,11 @@ paths:
           $ref: '#/components/responses/NotFound'
   /public/widgets/{embedToken}/health:
     get:
-      tags: [Public Runtime]
+      tags:
+      - Public Runtime
       summary: Get public runtime health status
       parameters:
-        - $ref: '#/components/parameters/EmbedToken'
+      - $ref: '#/components/parameters/EmbedToken'
       responses:
         '200':
           description: Runtime health
@@ -484,10 +628,11 @@ paths:
           $ref: '#/components/responses/NotFound'
   /public/widgets/{embedToken}/submit:
     post:
-      tags: [Public Runtime]
+      tags:
+      - Public Runtime
       summary: Submit form data from embedded widget
       parameters:
-        - $ref: '#/components/parameters/EmbedToken'
+      - $ref: '#/components/parameters/EmbedToken'
       requestBody:
         required: true
         content:
@@ -551,10 +696,11 @@ paths:
                 timestamp: '2026-08-05T12:00:00.000Z'
   /public/widgets/{embedToken}/events:
     post:
-      tags: [Public Runtime]
+      tags:
+      - Public Runtime
       summary: Track analytics event from embedded widget
       parameters:
-        - $ref: '#/components/parameters/EmbedToken'
+      - $ref: '#/components/parameters/EmbedToken'
       requestBody:
         required: true
         content:
@@ -597,63 +743,68 @@ paths:
                 timestamp: '2026-08-05T12:00:00.000Z'
   /api/v1/widgets/{id}/submissions:
     get:
-      tags: [Submissions]
+      tags:
+      - Submissions
       summary: List submissions for a widget
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - in: query
-          name: page
-          schema:
-            type: integer
-            default: 1
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 25
-            maximum: 100
-        - in: query
-          name: search
-          schema:
-            type: string
-        - in: query
-          name: dateFrom
-          schema:
-            type: string
-            format: date-time
-        - in: query
-          name: dateTo
-          schema:
-            type: string
-            format: date-time
-        - in: query
-          name: country
-          schema:
-            type: string
-        - in: query
-          name: browser
-          schema:
-            type: string
-        - in: query
-          name: device
-          schema:
-            type: string
-        - in: query
-          name: version
-          schema:
-            type: integer
-        - in: query
-          name: sort
-          schema:
-            type: string
-            enum: [createdAt]
-            default: createdAt
-        - in: query
-          name: order
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 25
+          maximum: 100
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: dateFrom
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: dateTo
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: country
+        schema:
+          type: string
+      - in: query
+        name: browser
+        schema:
+          type: string
+      - in: query
+        name: device
+        schema:
+          type: string
+      - in: query
+        name: version
+        schema:
+          type: integer
+      - in: query
+        name: sort
+        schema:
+          type: string
+          enum:
+          - createdAt
+          default: createdAt
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+          default: desc
       responses:
         '200':
           description: Paginated submission list
@@ -665,18 +816,26 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/submissions/{submissionId}:
     get:
-      tags: [Submissions]
+      tags:
+      - Submissions
       summary: Get submission detail
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - in: path
-          name: submissionId
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - in: path
+        name: submissionId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Submission detail
@@ -686,28 +845,44 @@ paths:
                 $ref: '#/components/schemas/SubmissionDetailResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
     delete:
-      tags: [Submissions]
+      tags:
+      - Submissions
       summary: Soft delete a submission
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - in: path
-          name: submissionId
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - in: path
+        name: submissionId
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '204':
           description: Submission deleted
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/submissions/export:
     post:
-      tags: [Submissions]
+      tags:
+      - Submissions
       summary: Export submissions as CSV
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
       requestBody:
         required: false
         content:
@@ -728,24 +903,34 @@ paths:
             text/csv:
               schema:
                 type: string
-              example: |
-                Date,Widget,Version,Payload,Country,Browser,Device
+              example: 'Date,Widget,Version,Payload,Country,Browser,Device
+
                 2026-08-05T12:00:00.000Z,Contact Us,2,"{""email"":""john@example.com""}",US,Chrome,desktop
+
+                '
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/analytics:
     get:
-      tags: [Analytics]
+      tags:
+      - Analytics
       summary: Get widget analytics overview
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - $ref: '#/components/parameters/AnalyticsDateFrom'
-        - $ref: '#/components/parameters/AnalyticsDateTo'
-        - $ref: '#/components/parameters/AnalyticsVersion'
-        - $ref: '#/components/parameters/AnalyticsCountry'
-        - $ref: '#/components/parameters/AnalyticsBrowser'
-        - $ref: '#/components/parameters/AnalyticsDevice'
-        - $ref: '#/components/parameters/AnalyticsSource'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/AnalyticsDateFrom'
+      - $ref: '#/components/parameters/AnalyticsDateTo'
+      - $ref: '#/components/parameters/AnalyticsVersion'
+      - $ref: '#/components/parameters/AnalyticsCountry'
+      - $ref: '#/components/parameters/AnalyticsBrowser'
+      - $ref: '#/components/parameters/AnalyticsDevice'
+      - $ref: '#/components/parameters/AnalyticsSource'
       responses:
         '200':
           description: Analytics overview metrics
@@ -755,25 +940,37 @@ paths:
                 $ref: '#/components/schemas/AnalyticsOverviewResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/analytics/timeline:
     get:
-      tags: [Analytics]
+      tags:
+      - Analytics
       summary: Get widget analytics timeline
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - $ref: '#/components/parameters/AnalyticsDateFrom'
-        - $ref: '#/components/parameters/AnalyticsDateTo'
-        - $ref: '#/components/parameters/AnalyticsVersion'
-        - $ref: '#/components/parameters/AnalyticsCountry'
-        - $ref: '#/components/parameters/AnalyticsBrowser'
-        - $ref: '#/components/parameters/AnalyticsDevice'
-        - $ref: '#/components/parameters/AnalyticsSource'
-        - in: query
-          name: granularity
-          schema:
-            type: string
-            enum: [hour, day, week, month]
-            default: day
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/AnalyticsDateFrom'
+      - $ref: '#/components/parameters/AnalyticsDateTo'
+      - $ref: '#/components/parameters/AnalyticsVersion'
+      - $ref: '#/components/parameters/AnalyticsCountry'
+      - $ref: '#/components/parameters/AnalyticsBrowser'
+      - $ref: '#/components/parameters/AnalyticsDevice'
+      - $ref: '#/components/parameters/AnalyticsSource'
+      - in: query
+        name: granularity
+        schema:
+          type: string
+          enum:
+          - hour
+          - day
+          - week
+          - month
+          default: day
       responses:
         '200':
           description: Analytics timeline
@@ -783,19 +980,27 @@ paths:
                 $ref: '#/components/schemas/AnalyticsTimelineResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/analytics/devices:
     get:
-      tags: [Analytics]
+      tags:
+      - Analytics
       summary: Get device and browser breakdown
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - $ref: '#/components/parameters/AnalyticsDateFrom'
-        - $ref: '#/components/parameters/AnalyticsDateTo'
-        - $ref: '#/components/parameters/AnalyticsVersion'
-        - $ref: '#/components/parameters/AnalyticsCountry'
-        - $ref: '#/components/parameters/AnalyticsBrowser'
-        - $ref: '#/components/parameters/AnalyticsDevice'
-        - $ref: '#/components/parameters/AnalyticsSource'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/AnalyticsDateFrom'
+      - $ref: '#/components/parameters/AnalyticsDateTo'
+      - $ref: '#/components/parameters/AnalyticsVersion'
+      - $ref: '#/components/parameters/AnalyticsCountry'
+      - $ref: '#/components/parameters/AnalyticsBrowser'
+      - $ref: '#/components/parameters/AnalyticsDevice'
+      - $ref: '#/components/parameters/AnalyticsSource'
       responses:
         '200':
           description: Device and browser breakdown
@@ -805,19 +1010,27 @@ paths:
                 $ref: '#/components/schemas/AnalyticsDevicesResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/analytics/countries:
     get:
-      tags: [Analytics]
+      tags:
+      - Analytics
       summary: Get top countries breakdown
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - $ref: '#/components/parameters/AnalyticsDateFrom'
-        - $ref: '#/components/parameters/AnalyticsDateTo'
-        - $ref: '#/components/parameters/AnalyticsVersion'
-        - $ref: '#/components/parameters/AnalyticsCountry'
-        - $ref: '#/components/parameters/AnalyticsBrowser'
-        - $ref: '#/components/parameters/AnalyticsDevice'
-        - $ref: '#/components/parameters/AnalyticsSource'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/AnalyticsDateFrom'
+      - $ref: '#/components/parameters/AnalyticsDateTo'
+      - $ref: '#/components/parameters/AnalyticsVersion'
+      - $ref: '#/components/parameters/AnalyticsCountry'
+      - $ref: '#/components/parameters/AnalyticsBrowser'
+      - $ref: '#/components/parameters/AnalyticsDevice'
+      - $ref: '#/components/parameters/AnalyticsSource'
       responses:
         '200':
           description: Country breakdown
@@ -827,19 +1040,27 @@ paths:
                 $ref: '#/components/schemas/AnalyticsCountriesResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/analytics/sources:
     get:
-      tags: [Analytics]
+      tags:
+      - Analytics
       summary: Get traffic source breakdown
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - $ref: '#/components/parameters/AnalyticsDateFrom'
-        - $ref: '#/components/parameters/AnalyticsDateTo'
-        - $ref: '#/components/parameters/AnalyticsVersion'
-        - $ref: '#/components/parameters/AnalyticsCountry'
-        - $ref: '#/components/parameters/AnalyticsBrowser'
-        - $ref: '#/components/parameters/AnalyticsDevice'
-        - $ref: '#/components/parameters/AnalyticsSource'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/AnalyticsDateFrom'
+      - $ref: '#/components/parameters/AnalyticsDateTo'
+      - $ref: '#/components/parameters/AnalyticsVersion'
+      - $ref: '#/components/parameters/AnalyticsCountry'
+      - $ref: '#/components/parameters/AnalyticsBrowser'
+      - $ref: '#/components/parameters/AnalyticsDevice'
+      - $ref: '#/components/parameters/AnalyticsSource'
       responses:
         '200':
           description: Source breakdown
@@ -849,19 +1070,27 @@ paths:
                 $ref: '#/components/schemas/AnalyticsSourcesResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
   /api/v1/widgets/{id}/analytics/performance:
     get:
-      tags: [Analytics]
+      tags:
+      - Analytics
       summary: Get widget runtime performance metrics
       parameters:
-        - $ref: '#/components/parameters/WidgetId'
-        - $ref: '#/components/parameters/AnalyticsDateFrom'
-        - $ref: '#/components/parameters/AnalyticsDateTo'
-        - $ref: '#/components/parameters/AnalyticsVersion'
-        - $ref: '#/components/parameters/AnalyticsCountry'
-        - $ref: '#/components/parameters/AnalyticsBrowser'
-        - $ref: '#/components/parameters/AnalyticsDevice'
-        - $ref: '#/components/parameters/AnalyticsSource'
+      - $ref: '#/components/parameters/WorkspaceIdHeader'
+      - $ref: '#/components/parameters/WidgetId'
+      - $ref: '#/components/parameters/AnalyticsDateFrom'
+      - $ref: '#/components/parameters/AnalyticsDateTo'
+      - $ref: '#/components/parameters/AnalyticsVersion'
+      - $ref: '#/components/parameters/AnalyticsCountry'
+      - $ref: '#/components/parameters/AnalyticsBrowser'
+      - $ref: '#/components/parameters/AnalyticsDevice'
+      - $ref: '#/components/parameters/AnalyticsSource'
       responses:
         '200':
           description: Performance metrics
@@ -871,6 +1100,12 @@ paths:
                 $ref: '#/components/schemas/AnalyticsPerformanceResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+      - bearerAuth: []
 components:
   parameters:
     WidgetId:
@@ -886,7 +1121,7 @@ components:
       required: true
       schema:
         type: string
-        pattern: '^wt_[a-f0-9]{32}$'
+        pattern: ^wt_[a-f0-9]{32}$
         example: wt_0123456789abcdef0123456789abcdef
     AnalyticsDateFrom:
       in: query
@@ -920,13 +1155,28 @@ components:
       name: device
       schema:
         type: string
-        enum: [desktop, tablet, mobile]
+        enum:
+        - desktop
+        - tablet
+        - mobile
     AnalyticsSource:
       in: query
       name: source
       schema:
         type: string
-        enum: [direct, organic, referral, campaign]
+        enum:
+        - direct
+        - organic
+        - referral
+        - campaign
+    WorkspaceIdHeader:
+      in: header
+      name: X-Workspace-Id
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Active workspace context for the authenticated user
   schemas:
     Widget:
       type: object
@@ -943,7 +1193,10 @@ components:
           type: string
         status:
           type: string
-          enum: [DRAFT, PUBLISHED, ARCHIVED]
+          enum:
+          - DRAFT
+          - PUBLISHED
+          - ARCHIVED
         description:
           type: string
           nullable: true
@@ -977,11 +1230,9 @@ components:
           nullable: true
     CreateWidgetRequest:
       type: object
-      required: [workspaceId, name, createdBy]
+      required:
+      - name
       properties:
-        workspaceId:
-          type: string
-          format: uuid
         name:
           type: string
           minLength: 1
@@ -990,9 +1241,6 @@ components:
           type: string
           maxLength: 2000
         themeId:
-          type: string
-          format: uuid
-        createdBy:
           type: string
           format: uuid
     UpdateWidgetRequest:
@@ -1012,11 +1260,8 @@ components:
           nullable: true
     DuplicateWidgetRequest:
       type: object
-      required: [createdBy]
-      properties:
-        createdBy:
-          type: string
-          format: uuid
+      required: []
+      properties: {}
     WidgetResponse:
       type: object
       properties:
@@ -1069,16 +1314,16 @@ components:
     WidgetSchemaDocument:
       type: object
       required:
-        - version
-        - content
-        - layout
-        - theme
-        - fields
-        - behavior
-        - triggers
-        - localization
-        - animations
-        - metadata
+      - version
+      - content
+      - layout
+      - theme
+      - fields
+      - behavior
+      - triggers
+      - localization
+      - animations
+      - metadata
       properties:
         version:
           type: integer
@@ -1105,13 +1350,27 @@ components:
           type: object
     WidgetField:
       type: object
-      required: [id, type, label]
+      required:
+      - id
+      - type
+      - label
       properties:
         id:
           type: string
         type:
           type: string
-          enum: [text, email, phone, number, textarea, select, checkbox, radio, date, url, hidden]
+          enum:
+          - text
+          - email
+          - phone
+          - number
+          - textarea
+          - select
+          - checkbox
+          - radio
+          - date
+          - url
+          - hidden
         label:
           type: string
         required:
@@ -1124,7 +1383,8 @@ components:
             type: string
     WidgetSchemaRequest:
       type: object
-      required: [schema]
+      required:
+      - schema
       properties:
         schema:
           $ref: '#/components/schemas/WidgetSchemaDocument'
@@ -1196,7 +1456,8 @@ components:
           format: uuid
         status:
           type: string
-          enum: [PUBLISHED]
+          enum:
+          - PUBLISHED
         version:
           type: integer
         versionId:
@@ -1232,7 +1493,8 @@ components:
           format: uuid
         status:
           type: string
-          enum: [DRAFT]
+          enum:
+          - DRAFT
         publishedAt:
           type: 'null'
     UnpublishWidgetResponse:
@@ -1270,14 +1532,14 @@ components:
           format: uuid
     WidgetVersionDetail:
       allOf:
-        - $ref: '#/components/schemas/WidgetVersionSummary'
-        - type: object
-          properties:
-            widgetId:
-              type: string
-              format: uuid
-            schema:
-              $ref: '#/components/schemas/WidgetSchemaDocument'
+      - $ref: '#/components/schemas/WidgetVersionSummary'
+      - type: object
+        properties:
+          widgetId:
+            type: string
+            format: uuid
+          schema:
+            $ref: '#/components/schemas/WidgetSchemaDocument'
     WidgetVersionListResponse:
       type: object
       properties:
@@ -1319,7 +1581,8 @@ components:
           type: integer
         status:
           type: string
-          enum: [DRAFT]
+          enum:
+          - DRAFT
         restoredFromVersion:
           type: integer
     RestoreVersionResponse:
@@ -1415,7 +1678,9 @@ components:
           type: string
         cacheStatus:
           type: string
-          enum: [enabled, revalidated]
+          enum:
+          - enabled
+          - revalidated
     PublicHealthResponse:
       type: object
       properties:
@@ -1431,7 +1696,8 @@ components:
           format: date-time
     PublicSubmitRequest:
       type: object
-      required: [fields]
+      required:
+      - fields
       properties:
         fields:
           type: object
@@ -1453,7 +1719,9 @@ components:
               type: string
     PublicSubmitPayload:
       type: object
-      required: [success, message]
+      required:
+      - success
+      - message
       properties:
         success:
           type: boolean
@@ -1572,11 +1840,23 @@ components:
           type: integer
     AnalyticsEventRequest:
       type: object
-      required: [eventType, sessionId]
+      required:
+      - eventType
+      - sessionId
       properties:
         eventType:
           type: string
-          enum: [VIEW, OPEN, START, FIELD_FOCUS, FIELD_BLUR, FIELD_CHANGE, SUBMIT, SUCCESS, ERROR, CLOSE]
+          enum:
+          - VIEW
+          - OPEN
+          - START
+          - FIELD_FOCUS
+          - FIELD_BLUR
+          - FIELD_CHANGE
+          - SUBMIT
+          - SUCCESS
+          - ERROR
+          - CLOSE
         sessionId:
           type: string
         visitorId:
@@ -1649,7 +1929,11 @@ components:
       properties:
         granularity:
           type: string
-          enum: [hour, day, week, month]
+          enum:
+          - hour
+          - day
+          - week
+          - month
         points:
           type: array
           items:
@@ -1783,7 +2067,8 @@ components:
               message: Validation failed
               details:
                 fields:
-                  name: [Name is required]
+                  name:
+                  - Name is required
             message: Validation failed
             timestamp: '2026-08-05T12:00:00.000Z'
     NotFound:
@@ -1798,3 +2083,35 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or expired token
+            message: Invalid or expired token
+            timestamp: '2026-08-05T12:00:00.000Z'
+    Forbidden:
+      description: Insufficient workspace role permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: FORBIDDEN
+              message: Insufficient permissions
+            message: Insufficient permissions
+            timestamp: '2026-08-05T12:00:00.000Z'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth access token
