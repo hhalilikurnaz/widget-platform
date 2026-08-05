@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Widget Platform API
   version: 1.0.0
-  description: Widget Platform API including management, schema, publishing, public runtime, and submissions (Phase 3–7)
+  description: Widget Platform API including management, schema, publishing, public runtime, submissions, and analytics (Phase 3–8)
 servers:
   - url: http://localhost:4000
     description: Local development
@@ -13,6 +13,8 @@ tags:
     description: Public embed runtime endpoints
   - name: Submissions
     description: Widget submission management endpoints
+  - name: Analytics
+    description: Widget analytics dashboard endpoints
 paths:
   /api/v1/widgets:
     get:
@@ -547,6 +549,52 @@ paths:
                   message: Too many submissions, please try again later
                 message: Too many submissions, please try again later
                 timestamp: '2026-08-05T12:00:00.000Z'
+  /public/widgets/{embedToken}/events:
+    post:
+      tags: [Public Runtime]
+      summary: Track analytics event from embedded widget
+      parameters:
+        - $ref: '#/components/parameters/EmbedToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsEventRequest'
+            example:
+              eventType: VIEW
+              sessionId: anon-session-id
+              visitorId: anon-visitor-id
+              metadata:
+                pageUrl: https://example.com
+                referrer: https://google.com
+                country: US
+                browser: Chrome
+                device: desktop
+                operatingSystem: macOS
+                language: en-US
+                responseTimeMs: 120
+                runtimeVersion: 1.0.0
+      responses:
+        '204':
+          description: Event accepted
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Too many analytics events, please try again later
+                message: Too many analytics events, please try again later
+                timestamp: '2026-08-05T12:00:00.000Z'
   /api/v1/widgets/{id}/submissions:
     get:
       tags: [Submissions]
@@ -685,6 +733,144 @@ paths:
                 2026-08-05T12:00:00.000Z,Contact Us,2,"{""email"":""john@example.com""}",US,Chrome,desktop
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/analytics:
+    get:
+      tags: [Analytics]
+      summary: Get widget analytics overview
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - $ref: '#/components/parameters/AnalyticsDateFrom'
+        - $ref: '#/components/parameters/AnalyticsDateTo'
+        - $ref: '#/components/parameters/AnalyticsVersion'
+        - $ref: '#/components/parameters/AnalyticsCountry'
+        - $ref: '#/components/parameters/AnalyticsBrowser'
+        - $ref: '#/components/parameters/AnalyticsDevice'
+        - $ref: '#/components/parameters/AnalyticsSource'
+      responses:
+        '200':
+          description: Analytics overview metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsOverviewResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/analytics/timeline:
+    get:
+      tags: [Analytics]
+      summary: Get widget analytics timeline
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - $ref: '#/components/parameters/AnalyticsDateFrom'
+        - $ref: '#/components/parameters/AnalyticsDateTo'
+        - $ref: '#/components/parameters/AnalyticsVersion'
+        - $ref: '#/components/parameters/AnalyticsCountry'
+        - $ref: '#/components/parameters/AnalyticsBrowser'
+        - $ref: '#/components/parameters/AnalyticsDevice'
+        - $ref: '#/components/parameters/AnalyticsSource'
+        - in: query
+          name: granularity
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
+      responses:
+        '200':
+          description: Analytics timeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsTimelineResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/analytics/devices:
+    get:
+      tags: [Analytics]
+      summary: Get device and browser breakdown
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - $ref: '#/components/parameters/AnalyticsDateFrom'
+        - $ref: '#/components/parameters/AnalyticsDateTo'
+        - $ref: '#/components/parameters/AnalyticsVersion'
+        - $ref: '#/components/parameters/AnalyticsCountry'
+        - $ref: '#/components/parameters/AnalyticsBrowser'
+        - $ref: '#/components/parameters/AnalyticsDevice'
+        - $ref: '#/components/parameters/AnalyticsSource'
+      responses:
+        '200':
+          description: Device and browser breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsDevicesResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/analytics/countries:
+    get:
+      tags: [Analytics]
+      summary: Get top countries breakdown
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - $ref: '#/components/parameters/AnalyticsDateFrom'
+        - $ref: '#/components/parameters/AnalyticsDateTo'
+        - $ref: '#/components/parameters/AnalyticsVersion'
+        - $ref: '#/components/parameters/AnalyticsCountry'
+        - $ref: '#/components/parameters/AnalyticsBrowser'
+        - $ref: '#/components/parameters/AnalyticsDevice'
+        - $ref: '#/components/parameters/AnalyticsSource'
+      responses:
+        '200':
+          description: Country breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsCountriesResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/analytics/sources:
+    get:
+      tags: [Analytics]
+      summary: Get traffic source breakdown
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - $ref: '#/components/parameters/AnalyticsDateFrom'
+        - $ref: '#/components/parameters/AnalyticsDateTo'
+        - $ref: '#/components/parameters/AnalyticsVersion'
+        - $ref: '#/components/parameters/AnalyticsCountry'
+        - $ref: '#/components/parameters/AnalyticsBrowser'
+        - $ref: '#/components/parameters/AnalyticsDevice'
+        - $ref: '#/components/parameters/AnalyticsSource'
+      responses:
+        '200':
+          description: Source breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSourcesResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/analytics/performance:
+    get:
+      tags: [Analytics]
+      summary: Get widget runtime performance metrics
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - $ref: '#/components/parameters/AnalyticsDateFrom'
+        - $ref: '#/components/parameters/AnalyticsDateTo'
+        - $ref: '#/components/parameters/AnalyticsVersion'
+        - $ref: '#/components/parameters/AnalyticsCountry'
+        - $ref: '#/components/parameters/AnalyticsBrowser'
+        - $ref: '#/components/parameters/AnalyticsDevice'
+        - $ref: '#/components/parameters/AnalyticsSource'
+      responses:
+        '200':
+          description: Performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsPerformanceResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   parameters:
     WidgetId:
@@ -702,6 +888,45 @@ components:
         type: string
         pattern: '^wt_[a-f0-9]{32}$'
         example: wt_0123456789abcdef0123456789abcdef
+    AnalyticsDateFrom:
+      in: query
+      name: dateFrom
+      schema:
+        type: string
+        format: date-time
+    AnalyticsDateTo:
+      in: query
+      name: dateTo
+      schema:
+        type: string
+        format: date-time
+    AnalyticsVersion:
+      in: query
+      name: version
+      schema:
+        type: integer
+    AnalyticsCountry:
+      in: query
+      name: country
+      schema:
+        type: string
+    AnalyticsBrowser:
+      in: query
+      name: browser
+      schema:
+        type: string
+    AnalyticsDevice:
+      in: query
+      name: device
+      schema:
+        type: string
+        enum: [desktop, tablet, mobile]
+    AnalyticsSource:
+      in: query
+      name: source
+      schema:
+        type: string
+        enum: [direct, organic, referral, campaign]
   schemas:
     Widget:
       type: object
@@ -1345,6 +1570,185 @@ components:
           type: string
         version:
           type: integer
+    AnalyticsEventRequest:
+      type: object
+      required: [eventType, sessionId]
+      properties:
+        eventType:
+          type: string
+          enum: [VIEW, OPEN, START, FIELD_FOCUS, FIELD_BLUR, FIELD_CHANGE, SUBMIT, SUCCESS, ERROR, CLOSE]
+        sessionId:
+          type: string
+        visitorId:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    AnalyticsOverview:
+      type: object
+      properties:
+        views:
+          type: integer
+        uniqueVisitors:
+          type: integer
+        opens:
+          type: integer
+        starts:
+          type: integer
+        submissions:
+          type: integer
+        successes:
+          type: integer
+        errors:
+          type: integer
+        conversionRate:
+          type: number
+        completionRate:
+          type: number
+        averageCompletionTimeMs:
+          type: integer
+        bounceRate:
+          type: number
+        dateFrom:
+          type: string
+          format: date-time
+        dateTo:
+          type: string
+          format: date-time
+    AnalyticsOverviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/AnalyticsOverview'
+        timestamp:
+          type: string
+          format: date-time
+    AnalyticsTimelinePoint:
+      type: object
+      properties:
+        period:
+          type: string
+        views:
+          type: integer
+        opens:
+          type: integer
+        starts:
+          type: integer
+        submissions:
+          type: integer
+        successes:
+          type: integer
+        errors:
+          type: integer
+        conversionRate:
+          type: number
+    AnalyticsTimeline:
+      type: object
+      properties:
+        granularity:
+          type: string
+          enum: [hour, day, week, month]
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsTimelinePoint'
+    AnalyticsTimelineResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/AnalyticsTimeline'
+        timestamp:
+          type: string
+          format: date-time
+    AnalyticsDevicesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            devices:
+              type: object
+            browsers:
+              type: object
+        timestamp:
+          type: string
+          format: date-time
+    AnalyticsCountriesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  country:
+                    type: string
+                  count:
+                    type: integer
+                  percentage:
+                    type: number
+            total:
+              type: integer
+        timestamp:
+          type: string
+          format: date-time
+    AnalyticsSourcesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            direct:
+              type: integer
+            organic:
+              type: integer
+            referral:
+              type: integer
+            campaign:
+              type: integer
+            total:
+              type: integer
+        timestamp:
+          type: string
+          format: date-time
+    AnalyticsPerformance:
+      type: object
+      properties:
+        loadCount:
+          type: integer
+        averageResponseTimeMs:
+          type: integer
+        slowRequests:
+          type: integer
+        runtimeVersion:
+          type: string
+          nullable: true
+        cacheHitRatio:
+          type: number
+          nullable: true
+    AnalyticsPerformanceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/AnalyticsPerformance'
+        timestamp:
+          type: string
+          format: date-time
     ErrorResponse:
       type: object
       properties:

@@ -3,3 +3,4 @@ export { widgetSchemaRepository, WidgetSchemaRepository } from './widget-schema.
 export { widgetVersionRepository, WidgetVersionRepository } from './widget-version.repository.js';
 export { runtimeRepository, RuntimeRepository } from './runtime.repository.js';
 export { submissionRepository, SubmissionRepository } from './submission.repository.js';
+export { analyticsRepository, AnalyticsRepository } from './analytics.repository.js';

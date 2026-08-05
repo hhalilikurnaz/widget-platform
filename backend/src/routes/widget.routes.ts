@@ -3,8 +3,13 @@ import { Router } from 'express';
 import { widgetController } from '../controllers/widget.controller.js';
 import { widgetSchemaController } from '../controllers/widget-schema.controller.js';
 import { widgetVersionController } from '../controllers/widget-version.controller.js';
+import { analyticsController } from '../controllers/analytics.controller.js';
 import { submissionController } from '../controllers/submission.controller.js';
 import { validateRequest } from '../middlewares/validate.middleware.js';
+import {
+  analyticsQuerySchema,
+  analyticsTimelineQuerySchema,
+} from '../schemas/analytics.schema.js';
 import { widgetSchemaBodySchema } from '../schemas/widget-schema.schema.js';
 import {
   exportSubmissionsBodySchema,
@@ -102,6 +107,42 @@ router.delete(
   '/:id/submissions/:submissionId',
   validateRequest({ params: submissionParamsSchema }),
   submissionController.deleteSubmission,
+);
+
+router.get(
+  '/:id/analytics',
+  validateRequest({ params: widgetIdParamsSchema, query: analyticsQuerySchema }),
+  analyticsController.getOverview,
+);
+
+router.get(
+  '/:id/analytics/timeline',
+  validateRequest({ params: widgetIdParamsSchema, query: analyticsTimelineQuerySchema }),
+  analyticsController.getTimeline,
+);
+
+router.get(
+  '/:id/analytics/devices',
+  validateRequest({ params: widgetIdParamsSchema, query: analyticsQuerySchema }),
+  analyticsController.getDevices,
+);
+
+router.get(
+  '/:id/analytics/countries',
+  validateRequest({ params: widgetIdParamsSchema, query: analyticsQuerySchema }),
+  analyticsController.getCountries,
+);
+
+router.get(
+  '/:id/analytics/sources',
+  validateRequest({ params: widgetIdParamsSchema, query: analyticsQuerySchema }),
+  analyticsController.getSources,
+);
+
+router.get(
+  '/:id/analytics/performance',
+  validateRequest({ params: widgetIdParamsSchema, query: analyticsQuerySchema }),
+  analyticsController.getPerformance,
 );
 
 router.get('/:id', validateRequest({ params: widgetIdParamsSchema }), widgetController.getWidget);

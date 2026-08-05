@@ -37,4 +37,8 @@ export const MAX_FIELD_VALUE_LENGTH = 1000;
 
 export const MAX_TEXTAREA_LENGTH = 5000;
 
+export const ANALYTICS_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+
+export const ANALYTICS_RATE_LIMIT_MAX_REQUESTS = 100;
+
 export const EMBED_TOKEN_PATTERN = /^wt_[a-f0-9]{32}$/;

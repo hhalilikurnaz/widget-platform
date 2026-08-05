@@ -725,6 +725,119 @@ Filters: date range, country, browser, device, version.
 - Internal IDs and hashed IP are never exposed on public endpoints
 - Private list supports pagination, filtering, payload search, and sorting (newest/oldest)
 
+## Analytics Engine (Phase 8)
+
+The analytics engine ingests widget runtime events and exposes dashboard metrics for widget performance, conversion, and breakdowns.
+
+### Event Lifecycle
+
+```text
+widget.js
+   │
+   ▼
+POST /public/widgets/:embedToken/events
+   │
+   ▼
+Published widget validation
+   │
+   ▼
+Event stored in analytics_events
+   │
+   ▼
+Dashboard queries aggregate raw events
+```
+
+### Public Endpoint
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `POST` | `/public/widgets/:embedToken/events` | Ingest analytics event (returns `204`) |
+
+Supported event types: `VIEW`, `OPEN`, `START`, `FIELD_FOCUS`, `FIELD_BLUR`, `FIELD_CHANGE`, `SUBMIT`, `SUCCESS`, `ERROR`, `CLOSE`.
+
+### Private Dashboard Endpoints
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/api/v1/widgets/:id/analytics` | Overview metrics |
+| `GET` | `/api/v1/widgets/:id/analytics/timeline` | Time-series metrics |
+| `GET` | `/api/v1/widgets/:id/analytics/devices` | Device and browser breakdown |
+| `GET` | `/api/v1/widgets/:id/analytics/countries` | Top countries |
+| `GET` | `/api/v1/widgets/:id/analytics/sources` | Traffic sources |
+| `GET` | `/api/v1/widgets/:id/analytics/performance` | Runtime performance |
+
+### Example: Track Event
+
+```bash
+curl -X POST http://localhost:4000/public/widgets/wt_YOUR_EMBED_TOKEN/events \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "eventType": "VIEW",
+    "sessionId": "sess-123",
+    "visitorId": "vis-456",
+    "metadata": {
+      "pageUrl": "https://example.com",
+      "referrer": "https://google.com",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "desktop",
+      "responseTimeMs": 120,
+      "runtimeVersion": "1.0.0"
+    }
+  }'
+```
+
+### Example: Dashboard Overview
+
+```bash
+curl "http://localhost:4000/api/v1/widgets/WIDGET_ID/analytics?dateFrom=2026-01-01T00:00:00.000Z&dateTo=2026-08-05T00:00:00.000Z"
+```
+
+### Dashboard Metrics
+
+| Metric | Description |
+| ------ | ----------- |
+| Views | Count of `VIEW` events |
+| Unique Visitors | Distinct `visitorId` values |
+| Opens | Count of `OPEN` events |
+| Starts | Count of `START` events |
+| Submissions | Count of `SUBMIT` events |
+| Successes | Count of `SUCCESS` events |
+| Errors | Count of `ERROR` events |
+| Conversion Rate | Submissions / Views × 100 |
+| Completion Rate | Successes / Starts × 100 |
+| Average Completion Time | Mean `durationMs` on `SUCCESS` events |
+| Bounce Rate | Sessions with view but no open / total view sessions |
+
+### Timeline
+
+Granularity options: `hour`, `day`, `week`, `month`. Custom ranges via `dateFrom` and `dateTo`.
+
+### Breakdowns
+
+- **Devices:** desktop, tablet, mobile (+ browsers: Chrome, Safari, Firefox, Edge)
+- **Countries:** top countries with counts and percentages
+- **Sources:** direct, organic, referral, campaign (derived from referrer/page URL)
+
+### Filters
+
+All dashboard endpoints support: date range, widget version, country, browser, device, source.
+
+### Performance Metrics
+
+- Load count (VIEW events)
+- Average response time (`responseTimeMs` in metadata)
+- Slow requests (>1000ms)
+- Latest runtime version
+- Cache hit ratio (placeholder — `null` until cache telemetry is available)
+
+### Business Rules
+
+- Only **published** widgets accept analytics events
+- Extended event metadata stored in JSON `metadata` column (no schema redesign)
+- Analytics rate limit: 100 events/minute per IP
+- Internal IDs never exposed on public endpoints
+
 ## Environment Variables
 
 | Variable                    | Required | Description                                  |

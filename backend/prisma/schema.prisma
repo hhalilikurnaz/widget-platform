@@ -35,7 +35,12 @@ enum AnalyticsEventType {
   VIEW
   OPEN
   START
+  FIELD_FOCUS
+  FIELD_BLUR
+  FIELD_CHANGE
   SUBMIT
+  SUCCESS
+  ERROR
   CLOSE
 }
 

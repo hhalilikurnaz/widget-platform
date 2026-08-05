@@ -1,6 +1,8 @@
 import rateLimit from 'express-rate-limit';
 
 import {
+  ANALYTICS_RATE_LIMIT_MAX_REQUESTS,
+  ANALYTICS_RATE_LIMIT_WINDOW_MS,
   PUBLIC_RATE_LIMIT_MAX_REQUESTS,
   PUBLIC_RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_REQUESTS,
@@ -53,6 +55,22 @@ export const submissionRateLimiter = rateLimit({
       message: 'Too many submissions, please try again later',
     },
     message: 'Too many submissions, please try again later',
+    timestamp: new Date().toISOString(),
+  },
+});
+
+export const analyticsRateLimiter = rateLimit({
+  windowMs: ANALYTICS_RATE_LIMIT_WINDOW_MS,
+  max: ANALYTICS_RATE_LIMIT_MAX_REQUESTS,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many analytics events, please try again later',
+    },
+    message: 'Too many analytics events, please try again later',
     timestamp: new Date().toISOString(),
   },
 });
