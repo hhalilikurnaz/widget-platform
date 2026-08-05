@@ -6,3 +6,243 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum WorkspacePlan {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum WidgetStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum AnalyticsEventType {
+  VIEW
+  OPEN
+  START
+  SUBMIT
+  CLOSE
+}
+
+enum TemplateCategory {
+  LEAD_GENERATION
+  NEWSLETTER
+  FEEDBACK
+  SUPPORT
+  APPOINTMENT
+  ECOMMERCE
+  SAAS
+  HEALTHCARE
+  RESTAURANT
+  REAL_ESTATE
+  OTHER
+}
+
+// ---------------------------------------------------------------------------
+// Core tenancy
+// ---------------------------------------------------------------------------
+
+model Workspace {
+  id        String        @id @default(uuid())
+  name      String
+  slug      String        @unique
+  logoUrl   String?
+  plan      WorkspacePlan @default(FREE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  deletedAt DateTime?
+
+  memberships     Membership[]
+  widgets         Widget[]
+  themes          Theme[]
+  submissions     Submission[]
+  analyticsEvents AnalyticsEvent[]
+
+  @@map("workspaces")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  fullName  String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships    Membership[]
+  createdWidgets Widget[] @relation("WidgetCreator")
+
+  @@map("users")
+}
+
+model Membership {
+  id          String         @id @default(uuid())
+  userId      String
+  workspaceId String
+  role        MembershipRole @default(VIEWER)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+// ---------------------------------------------------------------------------
+// Widgets & versioning
+// ---------------------------------------------------------------------------
+
+model Widget {
+  id               String       @id @default(uuid())
+  workspaceId      String
+  name             String
+  slug             String
+  status           WidgetStatus @default(DRAFT)
+  description      String?
+  embedToken       String?      @unique
+  currentVersionId String?      @unique
+  themeId          String?
+  createdBy        String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  publishedAt      DateTime?
+  deletedAt        DateTime?
+
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator         User             @relation("WidgetCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  theme           Theme?           @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  currentVersion  WidgetVersion?   @relation("CurrentWidgetVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions        WidgetVersion[]  @relation("WidgetVersions")
+  submissions     Submission[]
+  analyticsEvents AnalyticsEvent[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId, status])
+  @@index([workspaceId, deletedAt])
+  @@index([createdAt])
+  @@index([publishedAt])
+  @@map("widgets")
+}
+
+model WidgetVersion {
+  id          String    @id @default(uuid())
+  widgetId    String
+  version     Int
+  schemaJson  Json      @db.JsonB
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  widget           Widget       @relation("WidgetVersions", fields: [widgetId], references: [id], onDelete: Cascade)
+  currentForWidget Widget?      @relation("CurrentWidgetVersion")
+  submissions      Submission[]
+
+  @@unique([widgetId, version])
+  @@index([widgetId, published])
+  @@index([publishedAt])
+  @@index([createdAt])
+  @@map("widget_versions")
+}
+
+// ---------------------------------------------------------------------------
+// Themes & templates
+// ---------------------------------------------------------------------------
+
+model Theme {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  themeJson   Json     @db.JsonB
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  widgets   Widget[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, isDefault])
+  @@map("themes")
+}
+
+model Template {
+  id           String           @id @default(uuid())
+  category     TemplateCategory
+  name         String
+  description  String
+  previewImage String?
+  schemaJson   Json             @db.JsonB
+  featured     Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([category, featured])
+  @@index([featured])
+  @@index([createdAt])
+  @@map("templates")
+}
+
+// ---------------------------------------------------------------------------
+// Submissions & analytics
+// ---------------------------------------------------------------------------
+
+model Submission {
+  id              String   @id @default(uuid())
+  workspaceId     String
+  widgetId        String
+  widgetVersionId String
+  payload         Json     @db.JsonB
+  country         String?
+  browser         String?
+  device          String?
+  ipHash          String?
+  createdAt       DateTime @default(now())
+
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  widget        Widget        @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+  widgetVersion WidgetVersion @relation(fields: [widgetVersionId], references: [id], onDelete: Restrict)
+
+  @@index([workspaceId, widgetId, createdAt])
+  @@index([widgetId, createdAt])
+  @@index([widgetVersionId])
+  @@map("submissions")
+}
+
+model AnalyticsEvent {
+  id          String             @id @default(uuid())
+  workspaceId String
+  widgetId    String
+  type        AnalyticsEventType
+  metadata    Json?              @db.JsonB
+  sessionId   String?
+  visitorId   String?
+  createdAt   DateTime           @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  widget    Widget    @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([widgetId, type, createdAt])
+  @@index([sessionId])
+  @@index([visitorId])
+  @@map("analytics_events")
+}

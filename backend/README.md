@@ -27,7 +27,9 @@ Routes → Controllers → Services → Repositories → Database (Prisma)
 ```
 backend/
 ├── prisma/
-│   └── schema.prisma          # Prisma schema (no models in Phase 1)
+│   ├── schema.prisma          # Complete database schema (Phase 2)
+│   ├── seed.ts                # Development seed data
+│   └── migrations/            # Prisma migration history
 ├── src/
 │   ├── app.ts                 # Express application factory
 │   ├── server.ts              # HTTP server, graceful shutdown
@@ -95,6 +97,213 @@ npm run prisma:generate
 | `npm run format`          | Format code with Prettier                            |
 | `npm run typecheck`       | TypeScript type checking                             |
 | `npm run prisma:generate` | Generate Prisma Client                               |
+| `npm run prisma:validate` | Validate Prisma schema                               |
+| `npm run prisma:migrate`  | Create and apply migrations (development)            |
+| `npm run prisma:migrate:deploy` | Apply migrations (production/staging)        |
+| `npm run prisma:seed`     | Seed development database                            |
+| `npm run prisma:studio`   | Open Prisma Studio                                   |
+
+## Database (Phase 2)
+
+Widget Platform uses **Supabase PostgreSQL** with **Prisma ORM**. The schema supports multi-tenancy, widget versioning, publishing, analytics, themes, and templates.
+
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    Workspace ||--o{ Membership : has
+    User ||--o{ Membership : has
+    Workspace ||--o{ Widget : owns
+    Workspace ||--o{ Theme : owns
+    User ||--o{ Widget : creates
+    Widget ||--o{ WidgetVersion : versions
+    Widget ||--o| WidgetVersion : currentVersion
+    Widget }o--o| Theme : uses
+    Widget ||--o{ Submission : receives
+    Widget ||--o{ AnalyticsEvent : tracks
+    WidgetVersion ||--o{ Submission : captures
+
+    Workspace {
+        uuid id PK
+        string name
+        string slug UK
+        string logoUrl
+        enum plan
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    User {
+        uuid id PK
+        string email UK
+        string fullName
+        string avatarUrl
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Membership {
+        uuid id PK
+        uuid userId FK
+        uuid workspaceId FK
+        enum role
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Widget {
+        uuid id PK
+        uuid workspaceId FK
+        string name
+        string slug
+        enum status
+        string embedToken UK
+        uuid currentVersionId FK
+        uuid themeId FK
+        uuid createdBy FK
+        datetime publishedAt
+    }
+
+    WidgetVersion {
+        uuid id PK
+        uuid widgetId FK
+        int version
+        json schemaJson
+        boolean published
+        datetime publishedAt
+    }
+
+    Theme {
+        uuid id PK
+        uuid workspaceId FK
+        string name
+        json themeJson
+        boolean isDefault
+    }
+
+    Template {
+        uuid id PK
+        enum category
+        string name
+        json schemaJson
+        boolean featured
+    }
+
+    Submission {
+        uuid id PK
+        uuid widgetId FK
+        uuid widgetVersionId FK
+        json payload
+        string country
+        string ipHash
+    }
+
+    AnalyticsEvent {
+        uuid id PK
+        uuid widgetId FK
+        enum type
+        json metadata
+        string sessionId
+        string visitorId
+    }
+```
+
+### Models
+
+| Model | Purpose |
+| ----- | ------- |
+| `Workspace` | Tenant organization (company) |
+| `User` | Platform user account |
+| `Membership` | User ↔ Workspace join with role |
+| `Widget` | Widget metadata and publish state |
+| `WidgetVersion` | Immutable schema snapshot per version |
+| `Theme` | Workspace visual theme tokens (JSON) |
+| `Template` | Global marketplace template catalog |
+| `Submission` | Form submission records |
+| `AnalyticsEvent` | Append-only runtime analytics events |
+
+### Migration Commands
+
+```bash
+# Validate schema
+npm run prisma:validate
+
+# Generate Prisma Client
+npm run prisma:generate
+
+# Create + apply migration (development)
+npm run prisma:migrate
+
+# Apply pending migrations (staging/production)
+npm run prisma:migrate:deploy
+```
+
+Initial migration: `20260803174200_init`
+
+### Supabase Connection (Important)
+
+**`P1001: Can't reach database server`** usually means your network is **IPv4-only**.
+
+| Mode | Host | Works on IPv4? |
+| ---- | ---- | -------------- |
+| Direct | `db.[ref].supabase.co:5432` | ❌ Often IPv6 only |
+| **Session pooler** | `aws-0-[region].pooler.supabase.com:5432` | ✅ Use this locally |
+
+**Fix:**
+
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project
+2. Click **Connect** (top bar)
+3. Copy **Session pooler** URI (port `5432`)
+4. Paste into `backend/.env` as `DATABASE_URL`
+5. Append if missing: `?sslmode=require`
+
+Example (region comes from your dashboard — do not guess):
+
+```env
+DATABASE_URL=postgresql://postgres.nirpqftawbfdzxdicgqi:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+Then run:
+
+```bash
+cd backend
+npm run prisma:migrate:deploy
+npm run prisma:seed
+npm run dev
+curl http://localhost:4000/health
+```
+
+### Seed Commands
+
+```bash
+# Populate development database with demo data
+npm run prisma:seed
+```
+
+Seed creates:
+
+- 1 workspace — Bright Smile Dental
+- 1 user — Sarah Chen (owner)
+- 3 themes — Corporate Blue, Modern Teal, Clean Minimal
+- 8 templates — healthcare, lead gen, newsletter, feedback, etc.
+- 3 widgets — 2 published, 1 draft (with versions)
+
+### Indexes & Constraints
+
+**Unique constraints:**
+
+- `Workspace.slug`
+- `User.email`
+- `Widget.embedToken`
+- `Widget(workspaceId, slug)` — slug unique per workspace
+- `Membership(userId, workspaceId)`
+- `WidgetVersion(widgetId, version)`
+
+**Key indexes:** `workspaceId`, `(workspaceId, status)`, `(workspaceId, deletedAt)`, `(workspaceId, widgetId, createdAt)`, `(widgetId, type, createdAt)`, `(widgetId, published)`, `sessionId`, `visitorId`
+
+**Soft delete:** `deletedAt` on `Workspace` and `Widget` (recoverable tenant data)
+
+**Tenant scoping:** `workspaceId` on `Submission` and `AnalyticsEvent` for multi-tenant queries without joins
 
 ## Environment Variables
 
@@ -214,22 +423,22 @@ Sensitive data (passwords, tokens, PII) is never logged.
 
 ## Future Phases
 
-### Phase 2 — Core Domain
+### Phase 3 — REST APIs & Auth
 
-- Prisma models and migrations (User, Workspace, Widget, etc.)
 - Authentication (JWT + refresh tokens)
 - Widget CRUD APIs
 - Workspace management
 - Repository implementations
+- Publish pipeline services
 
-### Phase 3 — Runtime & Submissions
+### Phase 4 — Runtime & Submissions
 
 - Public widget config endpoint
 - Submission ingestion
 - Analytics event tracking
 - Rate limiting per endpoint category
 
-### Phase 4 — Advanced Features
+### Phase 5 — Advanced Features
 
 - AI assistant integration
 - Template marketplace APIs
@@ -237,7 +446,7 @@ Sensitive data (passwords, tokens, PII) is never logged.
 - Webhook dispatch
 - Redis caching
 
-### Phase 5 — Production Hardening
+### Phase 6 — Production Hardening
 
 - Audit logging
 - Multi-tenant isolation tests
