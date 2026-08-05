@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Widget Platform API
   version: 1.0.0
-  description: Widget Platform API including management, schema, publishing, and public runtime (Phase 3–6)
+  description: Widget Platform API including management, schema, publishing, public runtime, and submissions (Phase 3–7)
 servers:
   - url: http://localhost:4000
     description: Local development
@@ -11,6 +11,8 @@ tags:
     description: Widget management endpoints
   - name: Public Runtime
     description: Public embed runtime endpoints
+  - name: Submissions
+    description: Widget submission management endpoints
 paths:
   /api/v1/widgets:
     get:
@@ -478,6 +480,211 @@ paths:
                 $ref: '#/components/schemas/PublicHealthResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+  /public/widgets/{embedToken}/submit:
+    post:
+      tags: [Public Runtime]
+      summary: Submit form data from embedded widget
+      parameters:
+        - $ref: '#/components/parameters/EmbedToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicSubmitRequest'
+            example:
+              fields:
+                name: John Doe
+                email: john@example.com
+                message: Hello, I have a question.
+              metadata:
+                pageUrl: https://example.com/contact
+                referrer: https://google.com
+                country: US
+                browser: Chrome
+                device: desktop
+      responses:
+        '201':
+          description: Submission accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSubmitResponse'
+              example:
+                success: true
+                data:
+                  success: true
+                  message: Thank you for your submission!
+                message: Thank you for your submission!
+                timestamp: '2026-08-05T12:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Duplicate submission detected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: CONFLICT
+                  message: Duplicate submission detected
+                message: Duplicate submission detected
+                timestamp: '2026-08-05T12:00:00.000Z'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Too many submissions, please try again later
+                message: Too many submissions, please try again later
+                timestamp: '2026-08-05T12:00:00.000Z'
+  /api/v1/widgets/{id}/submissions:
+    get:
+      tags: [Submissions]
+      summary: List submissions for a widget
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 25
+            maximum: 100
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: dateFrom
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: dateTo
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: country
+          schema:
+            type: string
+        - in: query
+          name: browser
+          schema:
+            type: string
+        - in: query
+          name: device
+          schema:
+            type: string
+        - in: query
+          name: version
+          schema:
+            type: integer
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [createdAt]
+            default: createdAt
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Paginated submission list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/submissions/{submissionId}:
+    get:
+      tags: [Submissions]
+      summary: Get submission detail
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - in: path
+          name: submissionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Submission detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Submissions]
+      summary: Soft delete a submission
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+        - in: path
+          name: submissionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Submission deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/widgets/{id}/submissions/export:
+    post:
+      tags: [Submissions]
+      summary: Export submissions as CSV
+      parameters:
+        - $ref: '#/components/parameters/WidgetId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmissionExportRequest'
+            example:
+              dateFrom: '2026-01-01T00:00:00.000Z'
+              dateTo: '2026-08-05T00:00:00.000Z'
+              country: US
+              browser: Chrome
+              device: desktop
+              version: 2
+      responses:
+        '200':
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+              example: |
+                Date,Widget,Version,Payload,Country,Browser,Device
+                2026-08-05T12:00:00.000Z,Contact Us,2,"{""email"":""john@example.com""}",US,Chrome,desktop
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   parameters:
     WidgetId:
@@ -620,12 +827,20 @@ components:
               type: integer
             totalPages:
               type: integer
-        message:
-          type: string
-          nullable: true
         timestamp:
           type: string
           format: date-time
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
     WidgetSchemaDocument:
       type: object
       required:
@@ -989,6 +1204,147 @@ components:
         timestamp:
           type: string
           format: date-time
+    PublicSubmitRequest:
+      type: object
+      required: [fields]
+      properties:
+        fields:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          properties:
+            referrer:
+              type: string
+            pageUrl:
+              type: string
+            country:
+              type: string
+            browser:
+              type: string
+            device:
+              type: string
+            honeypot:
+              type: string
+    PublicSubmitPayload:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Thank you for your submission!
+    PublicSubmitResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/PublicSubmitPayload'
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    SubmissionListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        widgetId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        preview:
+          type: string
+        country:
+          type: string
+          nullable: true
+        browser:
+          type: string
+          nullable: true
+        device:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    SubmissionListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubmissionListItem'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        timestamp:
+          type: string
+          format: date-time
+    SubmissionDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        widgetId:
+          type: string
+          format: uuid
+        widgetName:
+          type: string
+        version:
+          type: integer
+        payload:
+          type: object
+          additionalProperties: true
+        country:
+          type: string
+          nullable: true
+        browser:
+          type: string
+          nullable: true
+        device:
+          type: string
+          nullable: true
+        referrer:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    SubmissionDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/SubmissionDetail'
+        timestamp:
+          type: string
+          format: date-time
+    SubmissionExportRequest:
+      type: object
+      properties:
+        dateFrom:
+          type: string
+          format: date-time
+        dateTo:
+          type: string
+          format: date-time
+        country:
+          type: string
+        browser:
+          type: string
+        device:
+          type: string
+        version:
+          type: integer
     ErrorResponse:
       type: object
       properties:

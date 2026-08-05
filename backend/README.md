@@ -615,6 +615,116 @@ curl -H 'If-None-Match: "abc123def4567890"' \
 - Internal fields (`workspaceId`, `createdBy`, database IDs) are never exposed
 - Invalid embed token format returns `400`
 
+## Submission Pipeline (Phase 7)
+
+The submission pipeline receives form data from publicly embedded widgets, validates it against the published schema, applies spam protection, and stores submissions for management and export.
+
+### Submission Flow
+
+```text
+Website
+   │
+   ▼
+widget.js
+   │
+   ▼
+POST /public/widgets/:embedToken/submit
+   │
+   ▼
+Validation (published schema)
+   │
+   ▼
+Spam Protection (rate limit, duplicate detection, honeypot)
+   │
+   ▼
+Repository (IP hashed, metadata stored)
+   │
+   ▼
+Success Response
+```
+
+### Public Endpoint
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `POST` | `/public/widgets/:embedToken/submit` | Accept widget form submission |
+
+### Private Endpoints (Widget-Scoped)
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/api/v1/widgets/:id/submissions` | List submissions with pagination and filters |
+| `GET` | `/api/v1/widgets/:id/submissions/:submissionId` | Get submission detail |
+| `DELETE` | `/api/v1/widgets/:id/submissions/:submissionId` | Soft delete submission |
+| `POST` | `/api/v1/widgets/:id/submissions/export` | Export submissions as CSV |
+
+### Example: Submit Form Data
+
+```bash
+curl -X POST http://localhost:4000/public/widgets/wt_YOUR_EMBED_TOKEN/submit \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "fields": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "message": "Hello"
+    },
+    "metadata": {
+      "pageUrl": "https://example.com/contact",
+      "referrer": "https://google.com"
+    }
+  }'
+```
+
+### Example: List Submissions
+
+```bash
+curl "http://localhost:4000/api/v1/widgets/WIDGET_ID/submissions?page=1&limit=25&order=desc"
+```
+
+### Example: Export CSV
+
+```bash
+curl -X POST http://localhost:4000/api/v1/widgets/WIDGET_ID/submissions/export \
+  -H 'Content-Type: application/json' \
+  -d '{"dateFrom":"2026-01-01T00:00:00.000Z","dateTo":"2026-08-05T00:00:00.000Z"}' \
+  -o submissions.csv
+```
+
+### Validation
+
+Submissions are validated against the **published widget schema**:
+
+- Required fields enforced
+- Email, phone, URL, date, number, textarea formats checked
+- Select, radio, and checkbox values validated against schema options
+- Unknown fields rejected
+- Invalid payloads return `400` with field-level errors
+
+### Spam Protection
+
+| Control | Behavior |
+| ------- | -------- |
+| Global rate limiting | Applied via existing middleware |
+| Submission rate limit | 10 submissions/minute per IP |
+| Duplicate detection | Same IP + payload within 5 minutes rejected (`409`) |
+| Honeypot field | Non-empty honeypot rejected (`400`) |
+| Payload size limit | Request body limited to 1 MB (Express JSON parser) |
+| IP storage | Raw IP never stored; SHA-256 hash saved as `ipHash` |
+
+### CSV Export
+
+Export columns: **Date**, **Widget**, **Version**, **Payload**, **Country**, **Browser**, **Device**.
+
+Filters: date range, country, browser, device, version.
+
+### Business Rules
+
+- Only **published** widgets accept submissions; draft, archived, and deleted widgets return `404`
+- Submissions are linked to the published version at submit time
+- Internal IDs and hashed IP are never exposed on public endpoints
+- Private list supports pagination, filtering, payload search, and sorting (newest/oldest)
+
 ## Environment Variables
 
 | Variable                    | Required | Description                                  |

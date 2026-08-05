@@ -5,6 +5,8 @@ import {
   PUBLIC_RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_REQUESTS,
   RATE_LIMIT_WINDOW_MS,
+  SUBMISSION_RATE_LIMIT_MAX_REQUESTS,
+  SUBMISSION_RATE_LIMIT_WINDOW_MS,
 } from '../constants/index.js';
 
 export const globalRateLimiter = rateLimit({
@@ -35,6 +37,22 @@ export const publicRateLimiter = rateLimit({
       message: 'Too many requests, please try again later',
     },
     message: 'Too many requests, please try again later',
+    timestamp: new Date().toISOString(),
+  },
+});
+
+export const submissionRateLimiter = rateLimit({
+  windowMs: SUBMISSION_RATE_LIMIT_WINDOW_MS,
+  max: SUBMISSION_RATE_LIMIT_MAX_REQUESTS,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many submissions, please try again later',
+    },
+    message: 'Too many submissions, please try again later',
     timestamp: new Date().toISOString(),
   },
 });

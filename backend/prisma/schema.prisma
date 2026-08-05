@@ -206,16 +206,19 @@ model Template {
 // ---------------------------------------------------------------------------
 
 model Submission {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   workspaceId     String
   widgetId        String
   widgetVersionId String
-  payload         Json     @db.JsonB
+  payload         Json      @db.JsonB
   country         String?
   browser         String?
   device          String?
+  userAgent       String?
+  referrer        String?
   ipHash          String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime  @default(now())
+  deletedAt       DateTime?
 
   workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   widget        Widget        @relation(fields: [widgetId], references: [id], onDelete: Cascade)
@@ -223,6 +226,7 @@ model Submission {
 
   @@index([workspaceId, widgetId, createdAt])
   @@index([widgetId, createdAt])
+  @@index([widgetId, deletedAt])
   @@index([widgetVersionId])
   @@map("submissions")
 }

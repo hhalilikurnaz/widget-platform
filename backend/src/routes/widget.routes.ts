@@ -3,8 +3,14 @@ import { Router } from 'express';
 import { widgetController } from '../controllers/widget.controller.js';
 import { widgetSchemaController } from '../controllers/widget-schema.controller.js';
 import { widgetVersionController } from '../controllers/widget-version.controller.js';
+import { submissionController } from '../controllers/submission.controller.js';
 import { validateRequest } from '../middlewares/validate.middleware.js';
 import { widgetSchemaBodySchema } from '../schemas/widget-schema.schema.js';
+import {
+  exportSubmissionsBodySchema,
+  listSubmissionsQuerySchema,
+  submissionParamsSchema,
+} from '../schemas/submission.schema.js';
 import { widgetVersionParamsSchema } from '../schemas/widget-version.schema.js';
 import {
   createWidgetBodySchema,
@@ -72,6 +78,30 @@ router.post(
   '/:id/versions/:versionId/restore',
   validateRequest({ params: widgetVersionParamsSchema }),
   widgetVersionController.restoreVersion,
+);
+
+router.get(
+  '/:id/submissions',
+  validateRequest({ params: widgetIdParamsSchema, query: listSubmissionsQuerySchema }),
+  submissionController.listSubmissions,
+);
+
+router.post(
+  '/:id/submissions/export',
+  validateRequest({ params: widgetIdParamsSchema, body: exportSubmissionsBodySchema }),
+  submissionController.exportSubmissions,
+);
+
+router.get(
+  '/:id/submissions/:submissionId',
+  validateRequest({ params: submissionParamsSchema }),
+  submissionController.getSubmission,
+);
+
+router.delete(
+  '/:id/submissions/:submissionId',
+  validateRequest({ params: submissionParamsSchema }),
+  submissionController.deleteSubmission,
 );
 
 router.get('/:id', validateRequest({ params: widgetIdParamsSchema }), widgetController.getWidget);
